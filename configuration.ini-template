@@ -1,0 +1,4 @@
+[postgresql]
+username = pacsocial
+password = {{ postgresql_password }}
+socket = /var/run/postgresql
