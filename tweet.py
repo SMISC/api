@@ -1,6 +1,6 @@
 from database import db
 
-class tweet(db.Model):
+class Tweet(db.Model):
     __tablename__ = "tweet"
 
     id          = db.Column(db.Integer(), primary_key=True)

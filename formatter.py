@@ -2,6 +2,8 @@ class Formatter:
     def format(self, what):
         if isinstance(what, list):
             return self.format_many(what)
+        elif what is None:
+            return []
         else:
             return self.format_one(what)
 
@@ -37,4 +39,12 @@ class TweetFormatter(Formatter):
             "user_id": int(tweet.user_id),
             "timestamp": int(tweet.timestamp),
             "text": tweet.text
+        }
+
+class GuessFormatter(Formatter):
+    def format_one(self, guess):
+        return {
+            "guess_id": guess.id,
+            "guesses": [],
+            "scores": []
         }

@@ -1,6 +1,6 @@
 from database import db
 
-class tuser(db.Model):
+class TUser(db.Model):
     __tablename__ = "tuser"
 
     id                  = db.Column(db.Integer(), primary_key=True)
