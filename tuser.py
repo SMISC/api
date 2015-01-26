@@ -18,3 +18,5 @@ class TUser(db.Model):
     profile_image_url   = db.Column(db.Text())
     profile_banner_url  = db.Column(db.Text())
     protected           = db.Column(db.Binary())
+
+    tweets              = db.relationship('Tweet', backref='user')

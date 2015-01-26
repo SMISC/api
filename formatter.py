@@ -1,3 +1,5 @@
+from util import translate_virtual_time_to_alpha_time
+
 class Formatter:
     def format(self, what):
         if isinstance(what, list):
@@ -39,7 +41,7 @@ class TweetFormatter(Formatter):
             "id_str": str(tweet.tweet_id),
             "user_id": int(tweet.user_id),
             "user_id_str": str(tweet.user_id),
-            "created_at": int(tweet.timestamp),
+            "created_at": translate_virtual_time_to_alpha_time(int(tweet.timestamp)),
             "text": tweet.text,
 
             # Fill the fields as null until I finish back-scraping the data

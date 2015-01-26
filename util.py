@@ -1,29 +1,39 @@
+import logging
 import time
 import json
 import flask
 
 from functools import wraps
 
-TIME_DETECTION_START = 1422950400       # Tuesday, Feb 3, 2015 at Midnight PDT
-# TIME_BETA_START = 1422259200           # Jan 26, 2015 at Midnight PDT
-TIME_BETA_START = 1422172800            # Jan 25, 2015 at Midnight PDT
-TIME_COMPETITION_START = 1420704000     # Monday, Jan 8, 2015 at Midnight PDT
+from tweet import Tweet
+from tuser import TUser
+from scan import Scan
+
+TIME_DETECTION_START = 1422950400       # Feb 3,  2015 at Midnight PDT
+TIME_BETA_START = 1422259200            # Jan 26, 2015 at Midnight PDT
+#TIME_BETA_START = 1418025600            # Dec 8,  2014 at Midnight PDT
+TIME_BOT_COMPETITION_END = 1420704000   # Jan 8,  2015 at Midnight PDT
+TIME_BOT_COMPETITION_START = 1418025600 # Dec 8,  2014 at Midnight PDT
+
 GENEROUS_CURSOR_UPPER_BOUND = 15000
-DEFAULT_CURSOR_SIZE = 2
+DEFAULT_CURSOR_SIZE = 500
 
 def get_time_anchor():
     now = time.time()
 
-    if now >= TIME_DETECTION_START:
+    if we_are_out_of_beta():
         return TIME_DETECTION_START
     else:
         return TIME_BETA_START
 
-def translate_alpha_time_to_virtual_time(wall_time):
-    return wall_time - (get_time_anchor() - TIME_COMPETITION_START)
+def we_are_out_of_beta():
+    return (time.time() >= TIME_DETECTION_START)
+
+def translate_alpha_time_to_virtual_time(alpha_time):
+    return alpha_time - (get_time_anchor() - TIME_BOT_COMPETITION_START)
 
 def translate_virtual_time_to_alpha_time(virtual_time):
-    return virtual_time + (get_time_anchor() - TIME_COMPETITION_START)
+    return virtual_time + (get_time_anchor() - TIME_BOT_COMPETITION_START)
 
 def get_current_virtual_time():
     return translate_alpha_time_to_virtual_time(time.time())
@@ -50,7 +60,7 @@ def timeline(f):
         kwargs['since_count'] = since_size
         kwargs['max_id'] = max_id
 
-        return flask.make_response(f(*args, **kwargs))
+        return f(*args, **kwargs)
 
     return decorator
 
@@ -75,26 +85,32 @@ def cursor(f):
         kwargs['cursor_size'] = cursor_size
         kwargs['offset'] = offset
 
-        response = f(*args, **kwargs)
+        @flask.after_this_request
+        def add_header(response):
+            if offset > 0:
+                prev_cursor = str(offset - cursor_size) + '-' + str(cursor_size)
+                response.headers['X-Cursor-Previous'] = prev_cursor
 
-        if offset > 0:
-            prev_cursor = str(offset - cursor_size) + '-' + str(cursor_size)
-            response.headers['X-Cursor-Previous'] = prev_cursor
+            response.headers['X-Cursor-Next'] = next_cursor
+            return response
 
-        response.headers['X-Cursor-Next'] = next_cursor
-
-        return response
+        return f(*args, **kwargs)
 
     return decorator
 
 def make_json_response(f):
     @wraps(f)
     def decorator(*args, **kwargs):
-        response = f(*args, **kwargs)
-        flask_response = flask.make_response(json.dumps(response))
-        if response is None or isinstance(response, list) and len(response) == 0:
-            flask_response.status_code = 204
-        return flask_response
+
+        @flask.after_this_request
+        def add_header(response):
+            if len(response.response) == 0 and response.status_code == 200:
+                response.status_code = 204
+
+            response.headers['Content-Type'] = 'application/json'
+            return response
+
+        return f(*args, **kwargs)
     return decorator
 
 def not_implemented(f):
@@ -104,19 +120,58 @@ def not_implemented(f):
 
     return decorator
 
-def fill_temporal(f):
+def temporal(f):
     @wraps(f)
     def decorator(*args, **kwargs):
-        if kwargs['time'] is None:
-            kwargs['time'] = time.time()
+        if kwargs['vtime'] is None:
+            kwargs['vtime'] = time.time()
+        
+        # Prevent someone from grabbing things before the social competition began, or the current virtual competition time.
+        # It has to be at least the start of the bot competition,
+        # It has to be at most the current time in the detection competition
+        kwargs['vtime'] = max(TIME_BOT_COMPETITION_START, min(get_current_virtual_time(), translate_alpha_time_to_virtual_time(int(kwargs['vtime']))))
+
         return f(*args, **kwargs)
             
     return decorator
 
-def translate_time(f):
+def disabled_beta(f):
     @wraps(f)
     def decorator(*args, **kwargs):
-        kwargs['time'] = translate_alpha_time_to_virtual_time(int(kwargs['time']))
+        if not we_are_out_of_beta():
+            return flask.make_response('', 429)
+    return decorator
+
+def beta_predicate_users(query):
+    return query
+
+def beta_predicate_tweets(query):
+    return query
+
+def nearest_scan(f):
+    @wraps(f)
+    def decorator(*args, **kwargs):
+        vtime = kwargs['vtime']
+
+        nearest_scan_result = Scan.query.filter(
+            Scan.end <= vtime,
+            Scan.type == Scan.SCAN_TYPE_USER
+        ).order_by(Scan.id.desc()).first()
+
+        if nearest_scan_result is not None:
+            kwargs['min_id'] = int(nearest_scan_result.ref_start)
+            kwargs['max_id'] = int(nearest_scan_result.ref_end)
+
+            @flask.after_this_request
+            def add_header(response):
+                response.headers['X-Observed-Min'] = translate_virtual_time_to_alpha_time(int(nearest_scan_result.start))
+                response.headers['X-Observed-Max'] = translate_virtual_time_to_alpha_time(int(nearest_scan_result.end))
+                return response
+        else:
+            logging.info('did not find scan around %d', vtime)
+            kwargs['min_id'] = 0
+            kwargs['max_id'] = 0
+
         return f(*args, **kwargs)
-            
+
     return decorator
