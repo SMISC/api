@@ -45,6 +45,8 @@ class TweetFormatter(Formatter):
             "text": tweet.text,
 
             # Fill the fields as null until I finish back-scraping the data
+            "retweet_count": None,
+            "retweet_status_id": None,
             "entities": [],
             "coordinates": None,
             "in_reply_to_screen_name": None,
