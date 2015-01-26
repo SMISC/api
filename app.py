@@ -84,8 +84,8 @@ def show_user(time, user_id):
     formatter = UserFormatter()
     return formatter.format(users)
 
-@app.route('/user/near/<time>/<user_id>/Tweets', methods=['GET'])
-@app.route('/user/<user_id>/Tweets', methods=['GET'], defaults={'time': None})
+@app.route('/user/near/<time>/<user_id>/tweets', methods=['GET'])
+@app.route('/user/<user_id>/tweets', methods=['GET'], defaults={'time': None})
 @fill_temporal
 @translate_time
 @timeline
@@ -101,8 +101,8 @@ def list_Tweets_by_user(time, max_id, since_id, since_count, user_id):
     formatter = TweetFormatter()
     return formatter.format(tweets)
 
-@app.route('/Tweets/near/<time>', methods=['GET'])
-@app.route('/Tweets', methods=['GET'], defaults={'time': None})
+@app.route('/tweets/near/<time>', methods=['GET'])
+@app.route('/tweets', methods=['GET'], defaults={'time': None})
 @fill_temporal
 @translate_time
 @timeline

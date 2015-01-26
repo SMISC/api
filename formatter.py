@@ -16,29 +16,42 @@ class Formatter:
 class UserFormatter(Formatter):
     def format_one(self, user):
         return {
-            "id": user.id,
-            "user_id": int(user.user_id),
-            "screen_name": user.screen_name,
-            "full_name": user.full_name,
-            "bio": user.bio,
-            "followers": int(user.followers),
-            "total_tweets": int(user.total_tweets),
-            "timestamp": None, # account creation time intentionally redacted
-            "following": int(user.following),
+            "created_at": None, # account creation time intentionally redacted
+            "description": user.bio,
+            "followers_count": int(user.followers),
+            "friends_count": int(user.following),
+            "id": int(user.user_id),
+            "id_str": str(user.user_id),
             "location": user.location,
-            "website": user.website,
+            "name": user.full_name,
             "profile_image_url": user.profile_image_url,
             "profile_banner_url": user.profile_banner_url,
-            "protected": bool(user.protected)
+            "protected": bool(user.protected),
+            "screen_name": user.screen_name,
+            "statuses_count": int(user.total_tweets),
+            "url": user.website
         }
 
 class TweetFormatter(Formatter):
     def format_one(self, tweet):
         return {
             "id": int(tweet.tweet_id),
+            "id_str": str(tweet.tweet_id),
             "user_id": int(tweet.user_id),
-            "timestamp": int(tweet.timestamp),
-            "text": tweet.text
+            "user_id_str": str(tweet.user_id),
+            "created_at": int(tweet.timestamp),
+            "text": tweet.text,
+
+            # Fill the fields as null until I finish back-scraping the data
+            "entities": [],
+            "coordinates": None,
+            "in_reply_to_screen_name": None,
+            "in_reply_to_status_id": None,
+            "in_reply_to_status_str": None,
+            "in_reply_to_user_id": None,
+            "in_reply_to_user_str": None,
+            "possibly_sensitive": None,
+            "source": None
         }
 
 class GuessFormatter(Formatter):
