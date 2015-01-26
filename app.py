@@ -2,6 +2,7 @@ import time
 import database
 import json
 import flask
+import logging
 import flask.json
 
 from flask import Flask
@@ -9,6 +10,7 @@ from ConfigParser import ConfigParser
 from functools import wraps
 
 from formatter import UserFormatter, TweetFormatter
+from search import Search
 
 from tuser import tuser
 from tweet import tweet
@@ -52,12 +54,21 @@ def timeline(f):
         else:
             since_id = 0
 
+        if 'X-Max-ID' in flask.request.headers:
+            max_id = int(flask.request.headers['X-Max-ID'])
+        else:
+            max_id = float('inf')
+
         if 'X-Since-Count' in flask.request.headers:
             since_size = min(GENEROUS_CURSOR_UPPER_BOUND, int(flask.request.headers['X-Since-Count']))
         else:
             since_size = DEFAULT_CURSOR_SIZE
 
-        return flask.make_response(f(since_id, since_size, *args, **kwargs))
+        kwargs['since_id'] = since_id
+        kwargs['since_count'] = since_size
+        kwargs['max_id'] = max_id
+
+        return flask.make_response(f(*args, **kwargs))
 
     return decorator
 
@@ -101,30 +112,103 @@ def make_json_response(f):
         return flask_response
     return decorator
 
-@app.route('/user', methods=['GET'])
-@timeline
+def not_implemented(f):
+    @wraps(f)
+    def decorator(*args, **kwargs):
+        return flask.make_response('', 501)
+
+    return decorator
+
+def fill_temporal(f):
+    @wraps(f)
+    def decorator(*args, **kwargs):
+        if kwargs['time'] is None:
+            kwargs['time'] = time.time()
+        return f(*args, **kwargs)
+            
+    return decorator
+
+def translate_time(f):
+    @wraps(f)
+    def decorator(*args, **kwargs):
+        kwargs['time'] = translate_alpha_time_to_virtual_time(int(kwargs['time']))
+        return f(*args, **kwargs)
+            
+    return decorator
+
+@app.route('/edges/near/<time>/followers/<user_id>', methods=['GET'])
+@not_implemented
 @make_json_response
-def temporal_list_all_users():
-    users = tuser.query.filter(tuser.timestamp < get_current_virtual_time()).order_by(tuser.id.desc()).limit(2).all()
+def timeless_list_followers():
+    pass
+
+@app.route('/edges/explore/<time>/<from_user>/to/<to_user>', methods=['GET'])
+@not_implemented
+@make_json_response
+def timeless_explore_edges():
+    pass
+
+@app.route('/user/near/<time>', methods=['GET'])
+@app.route('/user', methods=['GET'], defaults={'time': None})
+@not_implemented
+@fill_temporal
+@translate_time
+@make_json_response
+def list_users(time):
+    users = tuser.query.filter(tuser.timestamp <= time, tuser.timestamp < get_current_virtual_time()).order_by(tuser.id.desc()).limit(2).all()
     formatter = UserFormatter()
     return formatter.format(users)
 
-@app.route('/user/<user_id>', methods=['GET'])
+@app.route('/user/near/<time>/<user_id>', methods=['GET'])
+@app.route('/user/<user_id>', methods=['GET'], defaults={'time': None})
+@fill_temporal
+@translate_time
 @make_json_response
-def temporal_show_user(user_id):
+def show_user(time, user_id):
     users = tuser.query.filter(tuser.user_id == user_id, tuser.timestamp < get_current_virtual_time()).order_by(tuser.id.desc()).limit(1).first()
     formatter = UserFormatter()
     return formatter.format(users)
 
-@app.route('/tweets', methods=['GET'])
+@app.route('/user/near/<time>/<user_id>/tweets', methods=['GET'])
+@app.route('/user/<user_id>/tweets', methods=['GET'], defaults={'time': None})
+@fill_temporal
+@translate_time
 @timeline
 @make_json_response
-def temporal_list_all_tweets(since_id, since_count):
-    tweets = tweet.query.filter(tweet.tweet_id > since_id, tweet.timestamp < get_current_virtual_time()).order_by(tweet.timestamp.desc()).limit(since_count).all()
+def list_tweets_by_user(time, max_id, since_id, since_count, user_id):
+    logging.info('listing tweets ')
+    tweets = tweet.query.filter(tweet.tweet_id > since_id, tweet.tweet_id <= max_id, tweet.timestamp <= time, tweet.timestamp < get_current_virtual_time(), tweet.user_id == user_id).order_by(tweet.timestamp.desc()).limit(since_count).all()
     formatter = TweetFormatter()
     return formatter.format(tweets)
 
+@app.route('/tweets/near/<time>', methods=['GET'])
+@app.route('/tweets', methods=['GET'], defaults={'time': None})
+@fill_temporal
+@translate_time
+@timeline
+@make_json_response
+def list_tweets(time, max_id, since_id, since_count):
+    tweets = tweet.query.filter(tweet.tweet_id > since_id, tweet.tweet_id <= max_id, tweet.timestamp <= time, tweet.timestamp < get_current_virtual_time()).order_by(tweet.timestamp.desc()).limit(since_count).all()
+    formatter = TweetFormatter()
+    return formatter.format(tweets)
+
+@app.route('/search', methods=['GET', 'POST'])
+@timeline
+@not_implemented
+@make_json_response
+def search(max_id, since_id, since_count):
+    tweets_query = tweet.query.filter(tweet.timestamp < get_current_virtual_time(), tweet.tweet_id > since_id, tweet.tweet_id <= max_id).order_by(tweet.timestamp.desc()).limit(since_count)
+    search = Search(flask.request.values['q'])
+    search.apply_filter(tweets_query)
+
+    if 'users' in flask.request.values:
+        tweet_query.filter(tweet.user_id.in_(flask.request.values['users']))
+    tweets = tweets_query.all()
+
+    formatter = TweetFormatter()
+    return formatter.format(tweets)
 
 if __name__ == "__main__":
     app.debug = True
+    logging.getLogger().setLevel(logging.INFO)
     app.run(host='0.0.0.0')
