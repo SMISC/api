@@ -136,7 +136,7 @@ def show_user(vtime, user_id, max_id, min_id):
 @make_json_response
 @temporal
 @timeline
-def list_Tweets_by_user(vtime, max_id, since_id, since_count, user_id):
+def list_tweets_by_user(vtime, max_id, since_id, since_count, user_id):
     tweets = beta_predicate_tweets(Tweet.query.filter(
         Tweet.timestamp >= TIME_BOT_COMPETITION_START,
         Tweet.tweet_id > since_id, 
@@ -153,14 +153,14 @@ def list_Tweets_by_user(vtime, max_id, since_id, since_count, user_id):
 @temporal
 @timeline
 def list_tweets(vtime, max_id, since_id, since_count):
-    Tweets = beta_predicate_tweets(Tweet.query.filter(
+    tweets = beta_predicate_tweets(Tweet.query.filter(
         Tweet.timestamp >= TIME_BOT_COMPETITION_START,
         Tweet.tweet_id > since_id, 
         Tweet.tweet_id <= max_id, 
         Tweet.timestamp <= vtime
-    )).order_by(Tweet.timestamp.desc()).limit(since_count).all()
+    )).order_by(Tweet.timestamp.desc()).limit(int(since_count)).all()
     formatter = TweetFormatter()
-    return json.dumps(formatter.format(Tweets))
+    return json.dumps(formatter.format(tweets))
 
 @app.route('/search', methods=['GET', 'POST'])
 @make_json_response

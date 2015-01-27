@@ -148,7 +148,8 @@ def beta_predicate_users(query):
     return query.filter(TUser.interesting == (not we_are_out_of_beta()))
 
 def beta_predicate_tweets(query):
-    return query.join(Tweet.user).filter(TUser.interesting == (not we_are_out_of_beta()))
+    interesting_users_query = db.session.query(TUser.user_id).distinct().filter(TUser.interesting == (not we_are_out_of_beta())).subquery()
+    return query.filter(Tweet.user_id.in_(interesting_users_query))
 
 def nearest_scan(f):
     @wraps(f)
