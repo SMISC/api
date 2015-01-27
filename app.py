@@ -40,6 +40,7 @@ config.read('configuration.ini')
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://%s:%s@/pacsocial?host=%s' % (config.get('postgresql', 'username'), config.get('postgresql', 'password'), config.get('postgresql', 'socket'))
+app.config['SQLALCHEMY_ECHO'] = True
 database.db.init_app(app)
 
 def require_passcode(f):

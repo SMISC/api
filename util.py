@@ -9,6 +9,8 @@ from tweet import Tweet
 from tuser import TUser
 from scan import Scan
 
+from database import db
+
 TIME_DETECTION_START = 1422950400       # Feb 3,  2015 at Midnight PDT
 TIME_BETA_START = 1422259200            # Jan 26, 2015 at Midnight PDT
 #TIME_BETA_START = 1418025600            # Dec 8,  2014 at Midnight PDT
@@ -143,10 +145,16 @@ def disabled_beta(f):
     return decorator
 
 def beta_predicate_users(query):
-    return query
+    if we_are_out_of_beta():
+        return query
+    else:
+        return query.filter(TUser.interesting == True)
 
 def beta_predicate_tweets(query):
-    return query
+    if we_are_out_of_beta():
+        return query
+    else:
+        return query.join(Tweet.user).filter(TUser.interesting == True)
 
 def nearest_scan(f):
     @wraps(f)

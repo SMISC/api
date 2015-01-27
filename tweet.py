@@ -8,3 +8,5 @@ class Tweet(db.Model):
     user_id     = db.Column(db.String(32), db.ForeignKey('tuser.user_id'))
     timestamp   = db.Column(db.Integer())
     text        = db.Column(db.String(256))
+
+    user        = db.relationship('TUser')
