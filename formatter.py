@@ -48,7 +48,11 @@ class TweetFormatter(Formatter):
             "retweet_count": None,
             "retweet_status_id": None,
             "retweet_user_id": None,
-            "entities": [],
+            "entities": {
+                "urls": [],
+                "hashtags": [],
+                "mentions": []
+            },
             "coordinates": None,
             "in_reply_to_screen_name": None,
             "in_reply_to_status_id": None,
