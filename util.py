@@ -145,16 +145,10 @@ def disabled_beta(f):
     return decorator
 
 def beta_predicate_users(query):
-    if we_are_out_of_beta():
-        return query
-    else:
-        return query.filter(TUser.interesting == True)
+    return query.filter(TUser.interesting == (not we_are_out_of_beta()))
 
 def beta_predicate_tweets(query):
-    if we_are_out_of_beta():
-        return query
-    else:
-        return query.join(Tweet.user).filter(TUser.interesting == True)
+    return query.join(Tweet.user).filter(TUser.interesting == (not we_are_out_of_beta()))
 
 def nearest_scan(f):
     @wraps(f)
@@ -172,8 +166,8 @@ def nearest_scan(f):
 
             @flask.after_this_request
             def add_header(response):
-                response.headers['X-Observed-Min'] = translate_virtual_time_to_alpha_time(int(nearest_scan_result.start))
-                response.headers['X-Observed-Max'] = translate_virtual_time_to_alpha_time(int(nearest_scan_result.end))
+                response.headers['X-Observed-Min'] = int(nearest_scan_result.start)
+                response.headers['X-Observed-Max'] = int(nearest_scan_result.end)
                 return response
         else:
             logging.info('did not find scan around %d', vtime)
