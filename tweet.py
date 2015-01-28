@@ -10,3 +10,4 @@ class Tweet(db.Model):
     text        = db.Column(db.String(256))
 
     user        = db.relationship('TUser')
+    entities    = db.relationship('TweetEntity', lazy='joined')

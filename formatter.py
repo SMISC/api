@@ -36,6 +36,20 @@ class UserFormatter(Formatter):
 
 class TweetFormatter(Formatter):
     def format_one(self, tweet):
+        entities = {
+            'hashtags': [],
+            'urls': [],
+            'mentions': []
+            }
+
+        for entity in tweet.entities:
+            if entity.type == 'hashtag':
+                entities['hashtags'].append(entity.text)
+            elif entity.type == 'url':
+                entities['urls'].append(entity.text)
+            elif entity.type == 'mention':
+                entities['mentions'].append(entity.text)
+
         return {
             "id": int(tweet.tweet_id),
             "id_str": str(tweet.tweet_id),
@@ -48,11 +62,7 @@ class TweetFormatter(Formatter):
             "retweet_count": None,
             "retweet_status_id": None,
             "retweet_user_id": None,
-            "entities": {
-                "urls": [],
-                "hashtags": [],
-                "mentions": []
-            },
+            "entities": entities,
             "coordinates": None,
             "in_reply_to_screen_name": None,
             "in_reply_to_status_id": None,

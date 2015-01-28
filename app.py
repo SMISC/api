@@ -36,6 +36,7 @@ from tuser import TUser
 from tweet import Tweet
 from scan import Scan
 from bot import Bot
+from tweet_entity import TweetEntity
 
 config = ConfigParser()
 config.read('configuration.ini')
@@ -114,7 +115,7 @@ def timeless_explore_edges():
 def list_users(vtime, cursor_size, offset, max_id, min_id):
     users = beta_predicate_users(TUser.query.filter(
         TUser.id >= min_id,
-        TUser.id < max_id
+        TUser.id <= max_id
     )).order_by(TUser.id.desc()).limit(cursor_size).offset(offset).all()
     formatter = UserFormatter()
     return json.dumps(formatter.format(users))
@@ -145,7 +146,7 @@ def list_tweets_by_user(vtime, max_id, since_id, since_count, user_id):
         Tweet.tweet_id <= max_id, 
         Tweet.timestamp <= vtime, 
         Tweet.user_id == user_id
-    )).order_by(Tweet.timestamp.desc()).limit(since_count).all()
+    )).order_by(Tweet.tweet_id.desc()).limit(since_count).all()
     formatter = TweetFormatter()
     return json.dumps(formatter.format(tweets))
 
@@ -160,7 +161,7 @@ def list_tweets(vtime, max_id, since_id, since_count):
         Tweet.tweet_id > since_id, 
         Tweet.tweet_id <= max_id, 
         Tweet.timestamp <= vtime
-    )).order_by(Tweet.timestamp.desc()).limit(int(since_count)).all()
+    )).order_by(Tweet.tweet_id.desc()).limit(int(since_count)).all()
     formatter = TweetFormatter()
     return json.dumps(formatter.format(tweets))
 
@@ -174,7 +175,7 @@ def search(max_id, since_id, since_count):
         Tweet.timestamp < get_current_virtual_time(), 
         Tweet.tweet_id > since_id, 
         Tweet.tweet_id <= max_id
-    )).order_by(Tweet.timestamp.desc()).limit(since_count)
+    )).order_by(Tweet.tweet_id.desc()).limit(since_count)
 
     search = Search(flask.request.values['q'])
     search.apply_filter(tweets_query)
