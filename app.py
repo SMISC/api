@@ -24,6 +24,7 @@ from util import disabled_beta
 from util import nearest_scan
 from util import beta_predicate_tweets
 from util import beta_predicate_users
+from util import we_are_out_of_beta
 
 from formatter import UserFormatter, TweetFormatter, GuessFormatter
 from search import Search
@@ -34,6 +35,7 @@ from guess_user import GuessUser
 from tuser import TUser
 from tweet import Tweet
 from scan import Scan
+from bot import Bot
 
 config = ConfigParser()
 config.read('configuration.ini')
@@ -183,48 +185,61 @@ def search(max_id, since_id, since_count):
     tweets = tweets_query.all()
 
     formatter = TweetFormatter()
-    return formatter.format(tweets)
-
-@app.route('/guess', methods=['GET'])
-@make_json_response
-@disabled_beta
-@require_passcode
-def list_guesses(team_id):
-    guesses = Guess.query.filter(Guess.team_id == team_id).order_by(Guess.id.desc()).all()
-    formatter = GuessFormatter()
-    return formatter.format(guesses)
+    return json.dumps(formatter.format(tweets))
 
 @app.route('/guess/<guess_id>', methods=['GET'])
 @make_json_response
-@disabled_beta
 @require_passcode
 def show_guess(team_id, guess_id):
     guess = Guess.query.filter(Guess.team_id == team_id, Guess.id == guess_id).first()
+    
+    scores = dict()
+    for user in guess.users:
+        scores[user.tuser_id] = -0.25
+
+    bots_found = Bot.query.filter(Bot.twitter_id.in_(scores.keys()))
+
+    if we_are_out_of_beta():
+        for bot in bots_found:
+            scores[bot.twitter_id] = 1
+
     formatter = GuessFormatter()
-    return formatter.format(guess)
+    return json.dumps(formatter.format(guess, scores))
 
 @app.route('/guess', methods=['PUT', 'POST'])
 @make_json_response
-@disabled_beta
 @require_passcode
 def make_guess(team_id):
-    bots = flask.request.values['bots']
+    if 'bots' in flask.request.values:
+        bot_guesses = flask.request.values.getlist('bots')
 
-    if len(bots):
-        guess = Guess(team_id=team_id, timestamp=time.time())
-        database.db.session.add(guess)
-        database.db.session.commit()
+    if 'bots' not in flask.request.values or not len(bot_guesses):
+        return flask.make_response('', 400)
 
-        for bot in bots:
-            guess_user = GuessUser(guess_id=guess.id, tuser_id=bot)
-            database.db.session.add(guess_user)
+    guess = Guess(team_id=team_id, timestamp=time.time(), beta=(not we_are_out_of_beta()))
+    database.db.session.add(guess)
+    database.db.session.commit()
 
-        database.db.session.commit()
+    for bot in bot_guesses:
+        guess_user = GuessUser(guess_id=guess.id, tuser_id=bot)
+        database.db.session.add(guess_user)
 
-        guess = Guess.query.filter(Guess.id == guess.id).first()
+    database.db.session.commit()
 
-        formatter = GuessFormatter()
-        return formatter.format(guess)
+    bots_found = Bot.query.filter(Bot.twitter_id.in_(bot_guesses))
+    scores = dict()
+
+    for twitter_id in bot_guesses:
+        scores[twitter_id] = -0.25
+
+    if we_are_out_of_beta():
+        for bot in bots_found:
+            scores[bot.twitter_id] = 1
+
+    guess = Guess.query.filter(Guess.id == guess.id).first()
+
+    formatter = GuessFormatter()
+    return json.dumps(formatter.format(guess, scores))
 
 if __name__ == "__main__":
     app.debug = True

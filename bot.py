@@ -1,7 +1,10 @@
 from database import db
 
 class Bot(db.Model):
-    __tablename__ = "bot"
+    __tablename__ = "team_bot"
 
-    id          = db.Column(db.Integer(), primary_key=True)
-    bot_id      = db.Column(db.String(32))
+    team_id     = db.Column(db.Integer())
+    twitter_id  = db.Column(db.String(32), primary_key=True) # not really a primary key but ok
+    screen_name = db.Column(db.String(32))
+    type        = db.Column(db.Integer())
+    kill_date   = db.Column(db.Integer())

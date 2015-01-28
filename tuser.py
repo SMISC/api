@@ -17,4 +17,4 @@ class TUser(db.Model):
     website             = db.Column(db.Text())
     profile_image_url   = db.Column(db.Text())
     profile_banner_url  = db.Column(db.Text())
-    protected           = db.Column(db.Binary())
+    protected           = db.Column(db.Boolean())

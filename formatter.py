@@ -64,9 +64,28 @@ class TweetFormatter(Formatter):
         }
 
 class GuessFormatter(Formatter):
-    def format_one(self, guess):
+    def format(self, what, scores):
+        if isinstance(what, list):
+            return self.format_many(what, scores)
+        elif what is None:
+            return []
+        else:
+            return self.format_one(what, scores)
+
+    def format_many(self, things, scores):
+        rv = []
+        for thing in things:
+            rv.append(self.format_one(thing, scores))
+        return rv
+
+    def format_one(self, guess, scores):
+        guesses = []
+
+        for user in guess.users:
+            guesses.append(user.tuser_id)
+
         return {
             "guess_id": guess.id,
-            "guesses": [],
-            "scores": []
+            "guesses": guesses,
+            "scores": scores
         }

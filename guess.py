@@ -6,3 +6,6 @@ class Guess(db.Model):
     id          = db.Column(db.Integer(), primary_key=True)
     team_id     = db.Column(db.Integer())
     timestamp   = db.Column(db.Integer())
+    beta        = db.Column(db.Boolean())
+    
+    users       = db.relationship('GuessUser', lazy='joined')
