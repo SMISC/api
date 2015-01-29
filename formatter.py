@@ -94,8 +94,12 @@ class GuessFormatter(Formatter):
         for user in guess.users:
             guesses.append(user.tuser_id)
 
+        guess_scores = []
+        for (user_id, score) in scores.items():
+            guess_scores.append({"user_id": user_id, "score": score})
+
         return {
             "guess_id": guess.id,
             "guesses": guesses,
-            "scores": scores
+            "scores": guess_scores
         }

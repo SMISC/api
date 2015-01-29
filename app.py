@@ -193,6 +193,9 @@ def search(max_id, since_id, since_count):
 @require_passcode
 def show_guess(team_id, guess_id):
     guess = Guess.query.filter(Guess.team_id == team_id, Guess.id == guess_id).first()
+
+    if guess is None:
+        return flask.make_response('', 404)
     
     scores = dict()
     for user in guess.users:
