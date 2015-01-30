@@ -11,7 +11,7 @@ from scan import Scan
 
 from database import db
 
-TIME_DETECTION_START = 1422950400       # Feb 3,  2015 at Midnight PDT
+TIME_DETECTION_START = 1423468800       # Feb 9,  2015 at Midnight PDT
 TIME_BETA_START = 1422259200            # Jan 26, 2015 at Midnight PDT
 #TIME_BETA_START = 1418025600            # Dec 8,  2014 at Midnight PDT
 TIME_BOT_COMPETITION_END = 1420704000   # Jan 8,  2015 at Midnight PDT
