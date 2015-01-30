@@ -57,20 +57,17 @@ class TweetFormatter(Formatter):
             "user_id_str": str(tweet.user_id),
             "created_at": translate_virtual_time_to_alpha_time(int(tweet.timestamp)),
             "text": tweet.text,
-
-            # Fill the fields as null until I finish back-scraping the data
-            "retweet_count": None,
-            "retweet_status_id": None,
-            "retweet_user_id": None,
+            "retweet_count": tweet.retweet_count_frozen,
+            "retweet_status_id": tweet.retweet_status_id,
+            "retweet_user_id": tweet.retweet_user_id,
             "entities": entities,
-            "coordinates": None,
-            "in_reply_to_screen_name": None,
-            "in_reply_to_status_id": None,
-            "in_reply_to_status_str": None,
-            "in_reply_to_user_id": None,
-            "in_reply_to_user_str": None,
-            "possibly_sensitive": None,
-            "source": None
+            "coordinates": tweet.coordinates,
+            "in_reply_to_screen_name": tweet.in_reply_to_screen_name,
+            "in_reply_to_status_id": tweet.in_reply_to_status_id,
+            "in_reply_to_status_str": str(tweet.in_reply_to_status_id),
+            "in_reply_to_user_id": tweet.in_reply_to_user_id,
+            "in_reply_to_user_str": str(tweet.in_reply_to_user_id),
+            "source": tweet.source
         }
 
 class GuessFormatter(Formatter):
