@@ -40,7 +40,7 @@ class TweetFormatter(Formatter):
             'hashtags': [],
             'urls': [],
             'mentions': []
-            }
+        }
 
         for entity in tweet.entities:
             if entity.type == 'hashtag':

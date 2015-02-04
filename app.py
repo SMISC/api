@@ -212,25 +212,31 @@ def list_tweets(vtime, max_id, since_id, since_count):
 @app.route('/search', methods=['GET', 'POST'])
 @make_json_response
 @timeline
-@not_implemented
 def search(max_id, since_id, since_count):
     tweets_query = beta_predicate_tweets(Tweet.query.filter(
         Tweet.timestamp >= TIME_BOT_COMPETITION_START,
         Tweet.timestamp < get_current_virtual_time(), 
         Tweet.tweet_id > since_id, 
         Tweet.tweet_id <= max_id
-    )).order_by(Tweet.tweet_id.desc()).limit(since_count)
+    )).order_by(Tweet.tweet_id.desc())
 
-    search = Search(flask.request.values['q'])
-    search.apply_filter(tweets_query)
+    debug = []
+    search = Search(flask.request.values['q'], debug)
+    tree = search.parse()
+    ors = search.apply(tweets_query, tree)
 
     if 'users' in flask.request.values:
         tweet_query.filter(Tweet.user_id.in_(flask.request.values['users']))
 
-    tweets = tweets_query.all()
+    tweets = tweets_query.filter(ors).limit(since_count).all()
 
     formatter = TweetFormatter()
-    return json.dumps(formatter.format(tweets))
+    resp = json.dumps(formatter.format(tweets))
+
+    if 'X-Debug' in flask.request.headers:
+        return flask.make_response(resp, 200, {'Debug': debug})
+    else:
+        return resp
 
 @app.route('/guess/<guess_id>', methods=['GET'])
 @make_json_response
