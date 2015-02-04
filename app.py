@@ -248,4 +248,5 @@ def make_guess(team_id):
 if __name__ == "__main__":
     app.debug = True
     logging.getLogger().setLevel(logging.INFO)
+    logging.info(app.instance_path)
     app.run(host='0.0.0.0')

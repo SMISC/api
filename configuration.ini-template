@@ -8,3 +8,7 @@ keys = foo
     bar
 secrets = foo
     bar
+
+[cassandra]
+username = smisc
+password = {{ cassandra_password }}

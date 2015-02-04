@@ -159,7 +159,11 @@ class Twitter:
             data = params
             params = None
 
-        response = self.session.request(method, 'https://api.twitter.com/1.1/%s.json' % (resource), data=data, params=params, timeout=self.TIMEOUT)
+        try:
+            response = self.session.request(method, 'https://api.twitter.com/1.1/%s.json' % (resource), data=data, params=params, timeout=self.TIMEOUT)
+        except:
+            ''' usually a timeout '''
+            return None
 
         apiresponse = TwitterAPIResponse(response)
 
@@ -263,6 +267,9 @@ class StatefulTwitterAuthorized:
 
     def request(self, stateful, *args, **kwargs):
         response = self.twitter.request(*args, **kwargs)
+
+        if response is None:
+            return None
 
         if response.status_code == 401:
             rd = response.json
