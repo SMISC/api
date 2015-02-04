@@ -13,7 +13,7 @@ config.read('configuration.ini')
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://%s:%s@/pacsocial?host=%s' % (config.get('postgresql', 'username'), config.get('postgresql', 'password'), config.get('postgresql', 'socket'))
-app.config['SQLALCHEMY_ECHO'] = True
+app.config['SQLALCHEMY_ECHO'] = False
 database.db.init_app(app)
 
 class TwitterMultiplexer:
@@ -28,6 +28,7 @@ class TwitterMultiplexer:
 
 if __name__ == "__main__":
     logging.getLogger().setLevel(logging.INFO)
+    logging.getLogger('requests').setLevel(logging.WARN)
     keys = config.get('twitter', 'keys').split("\n")
     secrets = config.get('twitter', 'secrets').split("\n")
     apis = []
@@ -50,7 +51,7 @@ if __name__ == "__main__":
 
     with app.app_context():
         while True:
-            tweets = Tweet.query.filter(Tweet.tweet_id > start_tweet, Tweet.tweet_id % tweet_modulus == tweet_offset).order_by(Tweet.tweet_id.asc()).offset(tweet_page*tweets_per_page).limit(tweets_per_page).all()
+            tweets = Tweet.query.filter(Tweet.source == None, Tweet.tweet_id > start_tweet, Tweet.tweet_id % tweet_modulus == tweet_offset).order_by(Tweet.tweet_id.asc()).offset(tweet_page*tweets_per_page).limit(tweets_per_page).all()
             if len(tweets) == 0:
                 break
 
@@ -58,7 +59,7 @@ if __name__ == "__main__":
             for tweet in tweets:
                 tweet_ids.append(str(tweet.tweet_id))
 
-            logging.info(str(tweet_ids))
+            logging.info(min(tweet_ids))
 
             response = multi.request('statuses/lookup', {'id': ','.join(tweet_ids)})
 
