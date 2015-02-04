@@ -69,6 +69,8 @@ def timeline(f):
 def cursor(f):
     @wraps(f)
     def decorator(*args, **kwargs):
+        cursor = None
+
         if 'X-Cursor' in flask.request.headers:
             cursor = flask.request.headers['X-Cursor']
             (offset, cursor_size) = cursor.split('-')
@@ -94,6 +96,10 @@ def cursor(f):
                 response.headers['X-Cursor-Previous'] = prev_cursor
 
             response.headers['X-Cursor-Next'] = next_cursor
+
+            if cursor is not None:
+                response.headers['X-Cursor-Current'] = cursor
+
             return response
 
         return f(*args, **kwargs)

@@ -1,3 +1,4 @@
+import sys
 import database
 import logging
 import time
@@ -44,10 +45,11 @@ if __name__ == "__main__":
     start_tweet = 539573958715400193
     tweet_page = 0
     tweets_per_page = 100
+    tweet_offset = int(sys.argv[1])
 
     with app.app_context():
         while True:
-            tweets = Tweet.query.filter(Tweet.tweet_id > start_tweet).order_by(Tweet.tweet_id.asc()).offset(tweet_page*tweets_per_page).limit(tweets_per_page).all()
+            tweets = Tweet.query.filter(Tweet.tweet_id > start_tweet, Tweet.tweet_id % 5 == tweet_offset).order_by(Tweet.tweet_id.asc()).offset(tweet_page*tweets_per_page).limit(tweets_per_page).all()
             if len(tweets) == 0:
                 break
 
