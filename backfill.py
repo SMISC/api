@@ -51,6 +51,7 @@ if __name__ == "__main__":
     tweet_modulus = int(sys.argv[1])
     flush_cycles = 10
     flush_cycle = 0
+    tweets_updated = 0
 
     with app.app_context():
         while True:
@@ -71,10 +72,10 @@ if __name__ == "__main__":
 
             if response and response.status_code == 200:
                 twitter_tweets = response.json
-                for tweet in twitter_tweets['id'].values():
+                for (tweet_id, tweet) in twitter_tweets['id'].items():
                     if tweet is None:
-                        Tweet.query.filter(Tweet.tweet_id == tweet['id']).update({
-                            Tweet.deleted = True
+                        Tweet.query.filter(Tweet.tweet_id == tweet_id).update({
+                            Tweet.deleted: True
                         })
                     else:
                         retweet_user_id = None
@@ -93,8 +94,7 @@ if __name__ == "__main__":
                         if 'favorites_count' in tweet:
                             favorites_count = int(tweet['favorites_count'])
 
-                        logging.info('updating tweet %d', (tweet['id']))
-
+                        tweets_updated += 1
                         Tweet.query.filter(Tweet.tweet_id == tweet['id']).update({
                             Tweet.is_retweet: 'retweeted_status' in tweet,
                             Tweet.retweet_user_id: retweet_user_id,
@@ -114,6 +114,8 @@ if __name__ == "__main__":
                 if flush_cycle >= flush_cycles:
                     flush_cycle = 0
                     database.db.session.commit()
+                    logging.info('flushing %d updates', tweets_updated)
+                    tweets_updated = 0
 
                 time.sleep(5)
 
