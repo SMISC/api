@@ -102,44 +102,46 @@ def show_clock(vtime):
 @app.route('/edges/near/<vtime>/followers/<user_id>', methods=['GET'])
 @app.route('/edges/followers/<user_id>', methods=['GET'], defaults={'vtime': None})
 @make_json_response
-@not_implemented
 @temporal
 @timeline
 @nearest_scan(Scan.SCAN_TYPE_FOLLOWERS)
 def timeless_list_followers(vtime, user_id, max_id, since_id, since_count, max_scan_id, min_scan_id):
-    cluster = get_cassandra()
+    user = beta_predicate_users(TUser.query.filter(TUser.user_id == user_id)).first()
 
-    id_condition = ""
-    ids = []
+    if user is not None:
+        cluster = get_cassandra()
 
-    if min_scan_id is not None and max_scan_id is not None:
-        id_condition = "id >= %s and id < %s"
-        ids = [min_scan_id, max_scan_id]
-    elif min_scan_id is not None and max_scan_id is None:
-        id_condition = "id >= %s"
-        ids = [min_scan_id]
-    elif min_scan_id is None and max_scan_id is not None:
-        id_condition = "id < %s"
-        ids = [max_scan_id]
+        id_condition = ""
+        ids = []
 
-    if max_id != float('+inf'):
-        id_condition += " and id > %s and id <= %s"
+        wanted_min_id = since_id+1
+        wanted_max_id = max_id+1
+
+        if min_scan_id is not None and max_scan_id is not None:
+            wanted_min_id = max(since_id+1, min_scan_id)
+            wanted_max_id = min(max_id+1, max_scan_id)
+        elif min_scan_id is not None and max_scan_id is None:
+            wanted_min_id = max(since_id+1, min_scan_id)
+        elif min_scan_id is None and max_scan_id is not None:
+            wanted_max_id = min(max_id+1, max_scan_id)
+
+        conds = [user_id]
+
+        id_condition = 'id >= %s'
+        conds.append(wanted_min_id)
+
+        if wanted_max_id != float('+inf'):
+            id_condition += ' and id < %s'
+            conds.append(wanted_max_id)
+
+        logging.info(id_condition)
+        logging.info(conds)
+
+        rows = cluster.execute("SELECT id, to_user, from_user, \"timestamp\" FROM tuser_tuser WHERE to_user = %s AND " + id_condition + " ORDER BY id DESC LIMIT " + str(since_count), tuple(conds))
+        formatter = EdgeFormatter()
+        return json.dumps(formatter.format(rows))
     else:
-        id_condition += " and id > %s"
-
-    conds = [user_id]
-    conds.extend(ids)
-    conds.append(since_id)
-
-    if max_id != float('+inf'):
-        conds.append(max_id)
-
-    logging.info(id_condition)
-    logging.info(str(conds))
-
-    rows = cluster.execute("SELECT id, to_user, from_user, \"timestamp\" FROM tuser_tuser WHERE to_user = %s AND " + id_condition + " ORDER BY id ASC LIMIT " + str(since_count), tuple(conds))
-    formatter = EdgeFormatter()
-    return json.dumps(formatter.format(rows))
+        return flask.make_response('', 404)
 
 @app.route('/edges/explore/<vtime>/<from_user>/to/<to_user>', methods=['GET'])
 @make_json_response
