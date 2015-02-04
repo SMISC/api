@@ -42,14 +42,15 @@ if __name__ == "__main__":
         
     multi = TwitterMultiplexer(apis)
 
-    start_tweet = 539573958715400193
+    start_tweet = 541864758090000000
     tweet_page = 0
     tweets_per_page = 100
-    tweet_offset = int(sys.argv[1])
+    tweet_offset = int(sys.argv[2])
+    tweet_modulus = int(sys.argv[1])
 
     with app.app_context():
         while True:
-            tweets = Tweet.query.filter(Tweet.tweet_id > start_tweet, Tweet.tweet_id % 5 == tweet_offset).order_by(Tweet.tweet_id.asc()).offset(tweet_page*tweets_per_page).limit(tweets_per_page).all()
+            tweets = Tweet.query.filter(Tweet.tweet_id > start_tweet, Tweet.tweet_id % tweet_modulus == tweet_offset).order_by(Tweet.tweet_id.asc()).offset(tweet_page*tweets_per_page).limit(tweets_per_page).all()
             if len(tweets) == 0:
                 break
 
@@ -76,6 +77,10 @@ if __name__ == "__main__":
                     if 'coordinates' in tweet:
                         coordinates = str(tweet['coordinates'])
 
+                    favorites_count = None
+                    if 'favorites_count' in tweet:
+                        favorites_count = int(tweet['favorites_count'])
+
                     Tweet.query.filter(Tweet.tweet_id == tweet['id']).update({
                         Tweet.is_retweet: 'retweeted_status' in tweet,
                         Tweet.retweet_user_id: retweet_user_id,
@@ -85,6 +90,7 @@ if __name__ == "__main__":
                         Tweet.in_reply_to_user_id: tweet['in_reply_to_user_id'],
                         Tweet.in_reply_to_status_id: tweet['in_reply_to_status_id'],
                         Tweet.in_reply_to_screen_name: tweet['in_reply_to_screen_name'],
+                        Tweet.favorites_count: favorites_count,
                         Tweet.coordinates: coordinates
                     })
 

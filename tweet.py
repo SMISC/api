@@ -20,6 +20,7 @@ class Tweet(db.Model):
     retweet_status_id       = db.Column(db.Integer())
     retweet_count_frozen    = db.Column(db.Integer())
     coordinates             = db.Column(db.Text())
+    favorites_count         = db.Column(db.Integer())
 
     user                    = db.relationship('TUser')
     entities                = db.relationship('TweetEntity', lazy='joined')

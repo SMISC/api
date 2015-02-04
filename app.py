@@ -172,8 +172,8 @@ def list_users(vtime, cursor_size, offset, max_scan_id, min_scan_id):
 def show_user(vtime, user_id, max_scan_id, min_scan_id):
     users = beta_predicate_users(TUser.query.filter(
         TUser.user_id == user_id, 
-        TUser.id >= min_id,
-        TUser.id <= max_id
+        TUser.id >= min_scan_id,
+        TUser.id <= max_scan_id
     )).order_by(TUser.id.desc()).limit(1).first()
     formatter = UserFormatter()
     return json.dumps(formatter.format(users))
