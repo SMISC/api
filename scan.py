@@ -2,6 +2,7 @@ from database import db
 
 class Scan(db.Model):
     SCAN_TYPE_USER = 'info'
+    SCAN_TYPE_FOLLOWERS = 'followers_wide'
 
     __tablename__ = "scan"
 

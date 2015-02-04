@@ -9,6 +9,8 @@ from datetime import datetime
 from flask import Flask
 from ConfigParser import ConfigParser
 from functools import wraps
+from cassandra.cluster import Cluster as CassandraCluster
+from cassandra.auth import PlainTextAuthProvider
 
 from util import TIME_BOT_COMPETITION_START
 from util import timeline
@@ -26,7 +28,7 @@ from util import beta_predicate_tweets
 from util import beta_predicate_users
 from util import we_are_out_of_beta
 
-from formatter import UserFormatter, TweetFormatter, GuessFormatter
+from formatter import UserFormatter, TweetFormatter, GuessFormatter, EdgeFormatter
 from search import Search
 
 from detectionteam import DetectionTeam
@@ -45,6 +47,11 @@ app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://%s:%s@/pacsocial?host=%s' % (config.get('postgresql', 'username'), config.get('postgresql', 'password'), config.get('postgresql', 'socket'))
 app.config['SQLALCHEMY_ECHO'] = True
 database.db.init_app(app)
+
+def get_cassandra():
+    cluster = CassandraCluster([config.get('cassandra', 'contact')], auth_provider=PlainTextAuthProvider(username=config.get('cassandra', 'username'), password=config.get('cassandra', 'password')))
+    session = cluster.connect('smisc')
+    return session
 
 def require_passcode(f):
     @wraps(f)
@@ -93,11 +100,46 @@ def show_clock(vtime):
     })
 
 @app.route('/edges/near/<vtime>/followers/<user_id>', methods=['GET'])
+@app.route('/edges/followers/<user_id>', methods=['GET'], defaults={'vtime': None})
 @make_json_response
-@cursor
 @not_implemented
-def timeless_list_followers():
-    pass
+@temporal
+@timeline
+@nearest_scan(Scan.SCAN_TYPE_FOLLOWERS)
+def timeless_list_followers(vtime, user_id, max_id, since_id, since_count, max_scan_id, min_scan_id):
+    cluster = get_cassandra()
+
+    id_condition = ""
+    ids = []
+
+    if min_scan_id is not None and max_scan_id is not None:
+        id_condition = "id >= %s and id < %s"
+        ids = [min_scan_id, max_scan_id]
+    elif min_scan_id is not None and max_scan_id is None:
+        id_condition = "id >= %s"
+        ids = [min_scan_id]
+    elif min_scan_id is None and max_scan_id is not None:
+        id_condition = "id < %s"
+        ids = [max_scan_id]
+
+    if max_id != float('+inf'):
+        id_condition += " and id > %s and id <= %s"
+    else:
+        id_condition += " and id > %s"
+
+    conds = [user_id]
+    conds.extend(ids)
+    conds.append(since_id)
+
+    if max_id != float('+inf'):
+        conds.append(max_id)
+
+    logging.info(id_condition)
+    logging.info(str(conds))
+
+    rows = cluster.execute("SELECT id, to_user, from_user, \"timestamp\" FROM tuser_tuser WHERE to_user = %s AND " + id_condition + " ORDER BY id ASC LIMIT " + str(since_count), tuple(conds))
+    formatter = EdgeFormatter()
+    return json.dumps(formatter.format(rows))
 
 @app.route('/edges/explore/<vtime>/<from_user>/to/<to_user>', methods=['GET'])
 @make_json_response
@@ -111,11 +153,11 @@ def timeless_explore_edges():
 @make_json_response
 @temporal
 @cursor
-@nearest_scan
-def list_users(vtime, cursor_size, offset, max_id, min_id):
+@nearest_scan(Scan.SCAN_TYPE_USER)
+def list_users(vtime, cursor_size, offset, max_scan_id, min_scan_id):
     users = beta_predicate_users(TUser.query.filter(
-        TUser.id >= min_id,
-        TUser.id <= max_id
+        TUser.id >= min_scan_id,
+        TUser.id <= max_scan_id
     )).order_by(TUser.id.desc()).limit(cursor_size).offset(offset).all()
     formatter = UserFormatter()
     return json.dumps(formatter.format(users))
@@ -124,8 +166,8 @@ def list_users(vtime, cursor_size, offset, max_id, min_id):
 @app.route('/user/<user_id>', methods=['GET'], defaults={'vtime': None})
 @make_json_response
 @temporal
-@nearest_scan
-def show_user(vtime, user_id, max_id, min_id):
+@nearest_scan(Scan.SCAN_TYPE_USER)
+def show_user(vtime, user_id, max_scan_id, min_scan_id):
     users = beta_predicate_users(TUser.query.filter(
         TUser.user_id == user_id, 
         TUser.id >= min_id,

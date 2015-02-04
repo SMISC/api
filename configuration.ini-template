@@ -12,3 +12,4 @@ secrets = foo
 [cassandra]
 username = smisc
 password = {{ cassandra_password }}
+contact = cassandra.jacobgreenleaf.com

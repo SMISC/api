@@ -151,30 +151,39 @@ def beta_predicate_tweets(query):
     interesting_users_query = db.session.query(TUser.user_id).distinct().filter(TUser.interesting == (not we_are_out_of_beta())).subquery()
     return query.filter(Tweet.user_id.in_(interesting_users_query))
 
-def nearest_scan(f):
-    @wraps(f)
-    def decorator(*args, **kwargs):
-        vtime = kwargs['vtime']
+def nearest_scan(scan_type):
+    def deco(f):
+        @wraps(f)
+        def decorator(*args, **kwargs):
+            vtime = kwargs['vtime']
 
-        nearest_scan_result = Scan.query.filter(
-            Scan.end <= vtime,
-            Scan.type == Scan.SCAN_TYPE_USER
-        ).order_by(Scan.id.desc()).first()
+            nearest_scan_result = Scan.query.filter(
+                Scan.end <= vtime,
+                Scan.type == scan_type
+            ).order_by(Scan.id.desc()).first()
 
-        if nearest_scan_result is not None:
-            kwargs['min_id'] = int(nearest_scan_result.ref_start)
-            kwargs['max_id'] = int(nearest_scan_result.ref_end)
+            if nearest_scan_result is not None:
+                if nearest_scan_result.ref_start is not None:
+                    kwargs['min_scan_id'] = int(nearest_scan_result.ref_start)
+                else:
+                    kwargs['min_scan_id'] = None
 
-            @flask.after_this_request
-            def add_header(response):
-                response.headers['X-Observed-Min'] = int(nearest_scan_result.start)
-                response.headers['X-Observed-Max'] = int(nearest_scan_result.end)
-                return response
-        else:
-            logging.info('did not find scan around %d', vtime)
-            kwargs['min_id'] = 0
-            kwargs['max_id'] = 0
+                if nearest_scan_result.ref_end is not None:
+                    kwargs['max_scan_id'] = int(nearest_scan_result.ref_end)
+                else:
+                    kwargs['max_scan_id'] = None
 
-        return f(*args, **kwargs)
+                @flask.after_this_request
+                def add_header(response):
+                    response.headers['X-Observed-Min'] = int(nearest_scan_result.start)
+                    response.headers['X-Observed-Max'] = int(nearest_scan_result.end)
+                    return response
+            else:
+                logging.info('did not find scan around %d', vtime)
+                kwargs['min_scan_id'] = 0
+                kwargs['max_scan_id'] = 0
 
-    return decorator
+            return f(*args, **kwargs)
+
+        return decorator
+    return deco

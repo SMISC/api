@@ -70,6 +70,16 @@ class TweetFormatter(Formatter):
             "source": tweet.source
         }
 
+class EdgeFormatter(Formatter):
+    def format_one(self, edge):
+        return {
+            "id": edge.id,
+            "approx_time": edge.timestamp,
+            "to_user": edge.to_user,
+            "from_user": edge.from_user,
+            "weight": 1
+        }
+
 class GuessFormatter(Formatter):
     def format(self, what, scores):
         if isinstance(what, list):
@@ -100,3 +110,4 @@ class GuessFormatter(Formatter):
             "guesses": guesses,
             "scores": guess_scores
         }
+
