@@ -21,6 +21,7 @@ class Tweet(db.Model):
     retweet_count_frozen    = db.Column(db.Integer())
     coordinates             = db.Column(db.Text())
     favorites_count         = db.Column(db.Integer())
+    deleted                 = db.Column(db.Boolean())
 
     user                    = db.relationship('TUser')
     entities                = db.relationship('TweetEntity', lazy='joined')
