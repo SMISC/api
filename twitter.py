@@ -4,8 +4,6 @@ import json
 import requests
 import time
 
-logger = logging.getLogger(__name__)
-
 from datetime import datetime
 
 class Twitter:
@@ -215,7 +213,7 @@ class AccessTokenRefresher:
             self.last_token = access_token
             return OAuth2TokenInjector(access_token)
         else:
-            logger.exception("Got HTTP %d when trying to grab access token but no access token found. Body: %s", response.status_code, response.text)
+            logging.exception("Got HTTP %d when trying to grab access token but no access token found. Body: %s", response.status_code, response.text)
             raise Exception("Erorr getting access token. HTTP %d" % (response.status_code,))
 
 class StatefulTwitter:
@@ -238,12 +236,13 @@ class StatefulTwitter:
             if response is None:
                 time.sleep(sleep_time)
                 sleep_time = min(64, sleep_time * 2)
+                logging.info('sleeping %d to avoid timedout', sleep_time)
 
         return response
 
 class StatefulTwitterUnauthorized:
     def _get_refreshed_twitter(self, stateful):
-        logger.info('refreshing')
+        logging.info('refreshing')
 
         refresher = stateful.get_refresher()
         injector = refresher.grant_injector()
