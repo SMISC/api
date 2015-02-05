@@ -107,6 +107,7 @@ class GuessFormatter(Formatter):
 
         return {
             "guess_id": guess.id,
+            "timestamp": guess.timestamp,
             "guesses": guesses,
             "scores": guess_scores
         }

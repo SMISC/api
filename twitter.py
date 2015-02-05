@@ -235,8 +235,9 @@ class StatefulTwitter:
 
         while response is None:
             response = self.state.request(self, *args, **kwargs)
-            time.sleep(sleep_time)
-            sleep_time = min(64, sleep_time * 2)
+            if response is None:
+                time.sleep(sleep_time)
+                sleep_time = min(64, sleep_time * 2)
 
         return response
 

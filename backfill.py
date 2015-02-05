@@ -8,6 +8,8 @@ from ConfigParser import ConfigParser
 from tweet import Tweet
 from twitter import twitter_from_credentials
 
+from sqlalchemy import or_
+
 config = ConfigParser()
 config.read('configuration.ini')
 
@@ -21,10 +23,13 @@ class TwitterMultiplexer:
         self.apis = apis
 
     def request(self, resource, params=None):
+        response = None
         for i in range(len(self.apis)):
             response = self.apis[i].request(resource, params)
             if response.status_code != 429:
                 return response
+        if response.status_code == 429:
+            return response
 
 if __name__ == "__main__":
     logging.getLogger().setLevel(logging.INFO)
@@ -49,13 +54,14 @@ if __name__ == "__main__":
     tweets_per_page = 100
     tweet_offset = int(sys.argv[2])
     tweet_modulus = int(sys.argv[1])
-    flush_cycles = 10
+    flush_cycles = 100
     flush_cycle = 0
     tweets_updated = 0
+    tweets_deleted = 0
 
     with app.app_context():
         while True:
-            tweets = Tweet.query.filter(Tweet.source == None, Tweet.tweet_id > tweet_id, Tweet.tweet_id % tweet_modulus == tweet_offset).order_by(Tweet.tweet_id.asc()).limit(tweets_per_page).all()
+            tweets = Tweet.query.filter(or_(Tweet.source == None, Tweet.deleted == None), Tweet.tweet_id > tweet_id, Tweet.tweet_id % tweet_modulus == tweet_offset).order_by(Tweet.tweet_id.asc()).limit(tweets_per_page).all()
 
             if len(tweets) == 0:
                 break
@@ -76,7 +82,8 @@ if __name__ == "__main__":
                     if tweet is None:
                         Tweet.query.filter(Tweet.tweet_id == tweet_id).update({
                             Tweet.deleted: True
-                        })
+                        }, synchronize_session=False)
+                        tweets_deleted += 1
                     else:
                         retweet_user_id = None
                         retweet_status_id = None
@@ -105,26 +112,27 @@ if __name__ == "__main__":
                             Tweet.in_reply_to_status_id: tweet['in_reply_to_status_id'],
                             Tweet.in_reply_to_screen_name: tweet['in_reply_to_screen_name'],
                             Tweet.favorites_count: favorites_count,
-                            Tweet.coordinates: coordinates
+                            Tweet.coordinates: coordinates,
+                            Tweet.deleted: False
                         }, synchronize_session=False)
 
                 tweet_page += 1
                 flush_cycle += 1
 
-                if flush_cycle >= flush_cycles:
-                    flush_cycle = 0
-                    database.db.session.commit()
-                    logging.info('flushing %d updates', tweets_updated)
-                    tweets_updated = 0
-
-                time.sleep(5)
-
             elif response and response.status_code == 429:
-                logging.info('over limits. sleeping...')
+                logging.info('over limits. sleeping around %d', int(max(tweet_ids)))
                 time.sleep(10)
             else:
-                logging.warn('error page %d (twitter response: %s)', tweet_page, str(response))
+                logging.warn('error page %d (twitter response: %s) around %d', tweet_modulus, str(response), int(max(tweet_ids)))
                 time.sleep(10)
+
+            if flush_cycle >= flush_cycles:
+                flush_cycle = 0
+                logging.info('node %d flushing %d updates and %d deletions around %d', tweet_modulus, tweets_updated, tweets_deleted, int(max(tweet_ids)))
+                database.db.session.commit()
+                tweets_updated = 0
+                tweets_deleted = 0
+
 
         database.db.session.commit()
 
