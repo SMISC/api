@@ -268,6 +268,30 @@ def show_guess(team_id, guess_id):
     formatter = GuessFormatter()
     return json.dumps(formatter.format(guess, scores))
 
+@app.route('/guess', methods=['GET'])
+@make_json_response
+@require_passcode
+def list_guesses(team_id):
+    guesses = Guess.query.filter(Guess.team_id == team_id).all()
+
+    scores = dict()
+    for guess in guesses:
+        scores[guess.id] = dict()
+
+    if len(guesses):
+        for guess in guesses:
+            for user in guess.users:
+                scores[guess.id][user.tuser_id] = -0.25
+
+            bots_found = Bot.query.filter(Bot.twitter_id.in_(scores[guess.id].keys()))
+
+            if we_are_out_of_beta():
+                for bot in bots_found:
+                    scores[guess.id][bot.twitter_id] = 1
+
+    formatter = GuessFormatter()
+    return json.dumps(formatter.format(guesses, scores))
+
 @app.route('/guess', methods=['PUT', 'POST'])
 @make_json_response
 @require_passcode

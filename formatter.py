@@ -92,7 +92,7 @@ class GuessFormatter(Formatter):
     def format_many(self, things, scores):
         rv = []
         for thing in things:
-            rv.append(self.format_one(thing, scores))
+            rv.append(self.format_one(thing, scores[thing.id]))
         return rv
 
     def format_one(self, guess, scores):
