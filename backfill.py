@@ -47,7 +47,7 @@ if __name__ == "__main__":
         
     multi = TwitterMultiplexer(apis)
 
-    start_tweet_id = 541864758090000000
+    start_tweet_id = 0
     tweet_id = start_tweet_id
     tweet_page = 0
     tweets_per_page = 100

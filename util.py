@@ -193,3 +193,4 @@ def nearest_scan(scan_type):
 
         return decorator
     return deco
+
