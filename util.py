@@ -112,7 +112,7 @@ def make_json_response(f):
 
         @flask.after_this_request
         def add_header(response):
-            if len(response.response) == 0 and response.status_code == 200:
+            if (len(response.response) == 0 or response.response[0] == '[]') and response.status_code == 200:
                 response.status_code = 204
 
             response.headers['Content-Type'] = 'application/json'
