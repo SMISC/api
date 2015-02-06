@@ -178,13 +178,17 @@ def list_users(vtime, cursor_size, offset, max_scan_id, min_scan_id):
 @temporal
 @nearest_scan(Scan.SCAN_TYPE_USER)
 def show_user(vtime, user_id, max_scan_id, min_scan_id):
-    users = beta_predicate_users(TUser.query.filter(
+    user = beta_predicate_users(TUser.query.filter(
         TUser.user_id == user_id, 
         TUser.id >= min_scan_id,
         TUser.id <= max_scan_id
     )).order_by(TUser.id.desc()).limit(1).first()
-    formatter = UserFormatter()
-    return json.dumps(formatter.format(users))
+
+    if user is None:
+        return flask.make_response('', 404)
+    else:
+        formatter = UserFormatter()
+        return json.dumps(formatter.format(user))
 
 @app.route('/user/near/<vtime>/<user_id>/tweets', methods=['GET'])
 @app.route('/user/<user_id>/tweets', methods=['GET'], defaults={'vtime': None})
@@ -192,15 +196,22 @@ def show_user(vtime, user_id, max_scan_id, min_scan_id):
 @temporal
 @timeline
 def list_tweets_by_user(vtime, max_id, since_id, since_count, user_id):
-    tweets = beta_predicate_tweets(Tweet.query.filter(
-        Tweet.timestamp >= TIME_BOT_COMPETITION_START,
-        Tweet.tweet_id > since_id, 
-        Tweet.tweet_id <= max_id, 
-        Tweet.timestamp <= vtime, 
-        Tweet.user_id == user_id
-    )).order_by(Tweet.tweet_id.desc()).limit(since_count).all()
-    formatter = TweetFormatter()
-    return json.dumps(formatter.format(tweets))
+    user = beta_predicate_users(TUser.query.filter(
+        TUser.user_id == user_id
+    )).limit(1).first()
+
+    if user is None:
+        return flask.make_response('', 404)
+    else:
+        tweets = beta_predicate_tweets(Tweet.query.filter(
+            Tweet.timestamp >= TIME_BOT_COMPETITION_START,
+            Tweet.tweet_id > since_id, 
+            Tweet.tweet_id <= max_id, 
+            Tweet.timestamp <= vtime, 
+            Tweet.user_id == user_id
+        )).order_by(Tweet.tweet_id.desc()).limit(since_count).all()
+        formatter = TweetFormatter()
+        return json.dumps(formatter.format(tweets))
 
 @app.route('/tweets/near/<vtime>', methods=['GET'])
 @app.route('/tweets', methods=['GET'], defaults={'vtime': None})
