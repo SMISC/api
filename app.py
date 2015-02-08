@@ -48,11 +48,13 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://%s:%s@/pacsocial?host=%s' 
 app.config['SQLALCHEMY_ECHO'] = False
 database.db.init_app(app)
 
+cluster = CassandraCluster([config.get('cassandra', 'contact')], auth_provider=PlainTextAuthProvider(username=config.get('cassandra', 'username'), password=config.get('cassandra', 'password')))
+session = cluster.connect('smisc')
+
+'''
 def cassandrafied(f):
     @wraps(f)
     def decorator(*args, **kwargs):
-        cluster = CassandraCluster([config.get('cassandra', 'contact')], auth_provider=PlainTextAuthProvider(username=config.get('cassandra', 'username'), password=config.get('cassandra', 'password')))
-        session = cluster.connect('smisc')
         kwargs['cassandra_cluster'] = session
         try:
             return f(*args, **kwargs)
@@ -61,6 +63,7 @@ def cassandrafied(f):
             cluster.shutdown()
 
     return decorator
+'''
 
 def require_passcode(f):
     @wraps(f)
@@ -114,8 +117,7 @@ def show_clock(vtime):
 @temporal
 @timeline
 @nearest_scan(Scan.SCAN_TYPE_FOLLOWERS)
-@cassandrafied
-def timeless_list_followers(cassandra_cluster, vtime, user_id, max_id, since_id, since_count, max_scan_id, min_scan_id):
+def timeless_list_followers(vtime, user_id, max_id, since_id, since_count, max_scan_id, min_scan_id):
     user = beta_predicate_users(TUser.query.filter(TUser.user_id == user_id)).first()
 
     if user is not None:
@@ -145,7 +147,7 @@ def timeless_list_followers(cassandra_cluster, vtime, user_id, max_id, since_id,
         logging.info(id_condition)
         logging.info(conds)
 
-        rows = cassandra_cluster.execute("SELECT id, to_user, from_user, \"timestamp\" FROM tuser_tuser WHERE to_user = %s AND " + id_condition + " ORDER BY id DESC LIMIT " + str(since_count), tuple(conds))
+        rows = session.execute("SELECT id, to_user, from_user, \"timestamp\" FROM tuser_tuser WHERE to_user = %s AND " + id_condition + " ORDER BY id DESC LIMIT " + str(since_count), tuple(conds))
         formatter = EdgeFormatter()
         return json.dumps(formatter.format(rows))
     else:
