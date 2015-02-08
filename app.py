@@ -51,7 +51,7 @@ database.db.init_app(app)
 def cassandrafied(f):
     @wraps(f)
     def decorator(*args, **kwargs):
-        cluster = CassandraCluster([config.get('cassandra', 'contact')], auth_provider=PlainTextAuthProvider(username=config.get('cassandra', 'username'), password=config.get('cassandra', 'password')))
+        cluster = CassandraCluster([config.get('cassandra', 'contact')], auth_provider=PlainTextAuthProvider(username=config.get('cassandra', 'username'), password=config.get('cassandra', 'password')), executor_threads=50)
         session = cluster.connect('smisc')
         kwargs['cassandra_cluster'] = session
         try:
