@@ -142,9 +142,6 @@ def timeless_list_followers(cassandra_cluster, vtime, user_id, max_id, since_id,
             id_condition += ' and id < %s'
             conds.append(wanted_max_id)
 
-        logging.info(id_condition)
-        logging.info(conds)
-
         rows = cassandra_cluster.execute("SELECT id, to_user, from_user, \"timestamp\" FROM tuser_tuser WHERE to_user = %s AND " + id_condition + " ORDER BY id DESC LIMIT " + str(since_count), tuple(conds))
         formatter = EdgeFormatter()
         return json.dumps(formatter.format(rows))
@@ -153,10 +150,46 @@ def timeless_list_followers(cassandra_cluster, vtime, user_id, max_id, since_id,
 
 @app.route('/edges/explore/<vtime>/<from_user>/to/<to_user>', methods=['GET'])
 @make_json_response
-@cursor
-@not_implemented
-def timeless_explore_edges():
-    pass
+@temporal
+@timeline
+@nearest_scan(Scan.SCAN_TYPE_FOLLOWERS)
+@cassandrafied
+def timeless_explore_edges(cassandra_cluster, vtime, from_user, to_user, max_id, since_id, since_count, max_scan_id, min_scan_id):
+    from_user = beta_predicate_users(TUser.query.filter(TUser.user_id == from_user)).first()
+    to_user = beta_predicate_users(TUser.query.filter(TUser.user_id == to_user)).first()
+
+    if from_user is not None and to_user is not None:
+        id_condition = ""
+        ids = []
+
+        wanted_min_id = since_id+1
+        wanted_max_id = max_id+1
+
+        if min_scan_id is not None and max_scan_id is not None:
+            wanted_min_id = max(since_id+1, min_scan_id)
+            wanted_max_id = min(max_id+1, max_scan_id)
+        elif min_scan_id is not None and max_scan_id is None:
+            wanted_min_id = max(since_id+1, min_scan_id)
+        elif min_scan_id is None and max_scan_id is not None:
+            wanted_max_id = min(max_id+1, max_scan_id)
+
+        conds = [to_user.user_id, from_user.user_id]
+
+        id_condition = 'id >= %s'
+        conds.append(wanted_min_id)
+
+        if wanted_max_id != float('+inf'):
+            id_condition += ' and id < %s'
+            conds.append(wanted_max_id)
+
+        logging.info(id_condition)
+        logging.info(conds)
+
+        rows = cassandra_cluster.execute("SELECT id, to_user, from_user, \"timestamp\" FROM tuser_tuser_inspect WHERE to_user = %s AND from_user = %s AND " + id_condition + " ORDER BY id DESC LIMIT " + str(since_count), tuple(conds))
+        formatter = EdgeFormatter()
+        return json.dumps(formatter.format(rows))
+    else:
+        return flask.make_response('', 404)
 
 @app.route('/user/near/<vtime>', methods=['GET'])
 @app.route('/user', methods=['GET'], defaults={'vtime': None})
