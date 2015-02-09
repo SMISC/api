@@ -155,10 +155,9 @@ def timeless_list_followers(cassandra_cluster, vtime, user_id, max_id, since_id,
 @nearest_scan(Scan.SCAN_TYPE_FOLLOWERS)
 @cassandrafied
 def timeless_explore_edges(cassandra_cluster, vtime, from_user, to_user, max_id, since_id, since_count, max_scan_id, min_scan_id):
-    from_user = beta_predicate_users(TUser.query.filter(TUser.user_id == from_user)).first()
     to_user = beta_predicate_users(TUser.query.filter(TUser.user_id == to_user)).first()
 
-    if from_user is not None and to_user is not None:
+    if to_user is not None:
         id_condition = ""
         ids = []
 
@@ -173,7 +172,7 @@ def timeless_explore_edges(cassandra_cluster, vtime, from_user, to_user, max_id,
         elif min_scan_id is None and max_scan_id is not None:
             wanted_max_id = min(max_id+1, max_scan_id)
 
-        conds = [to_user.user_id, from_user.user_id]
+        conds = [to_user.user_id, from_user]
 
         id_condition = 'id >= %s'
         conds.append(wanted_min_id)
