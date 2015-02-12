@@ -1,9 +1,11 @@
+import socket
 import database
 import flask
 import logging
 import time
 import json
 
+from logging.handlers import SysLogHandler
 from datetime import datetime
 
 from flask import Flask
@@ -370,8 +372,10 @@ def make_guess(team_id):
     formatter = GuessFormatter()
     return json.dumps(formatter.format(guess, scores))
 
+syslog = SysLogHandler('/dev/log', SysLogHandler.LOG_DAEMON, socket.SOCK_STREAM)
+syslog.setLevel(logging.DEBUG)
+app.logger.addHandler(syslog)
+
 if __name__ == "__main__":
     app.debug = True
-    logging.getLogger().setLevel(logging.INFO)
-    logging.info(app.instance_path)
     app.run(host='0.0.0.0')
