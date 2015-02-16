@@ -163,30 +163,23 @@ def timeless_explore_edges(cassandra_cluster, vtime, from_user, to_user, max_id,
         id_condition = ""
         ids = []
 
-        wanted_min_id = since_id+1
         wanted_max_id = max_id+1
 
         if min_scan_id is not None and max_scan_id is not None:
-            wanted_min_id = max(since_id+1, min_scan_id)
             wanted_max_id = min(max_id+1, max_scan_id)
-        elif min_scan_id is not None and max_scan_id is None:
-            wanted_min_id = max(since_id+1, min_scan_id)
         elif min_scan_id is None and max_scan_id is not None:
             wanted_max_id = min(max_id+1, max_scan_id)
 
         conds = [to_user.user_id, from_user]
 
-        id_condition = 'id >= %s'
-        conds.append(wanted_min_id)
-
         if wanted_max_id != float('+inf'):
-            id_condition += ' and id < %s'
+            id_condition += 'AND id < %s'
             conds.append(wanted_max_id)
 
         logging.info(id_condition)
         logging.info(conds)
 
-        rows = cassandra_cluster.execute("SELECT id, to_user, from_user, \"timestamp\" FROM tuser_tuser_inspect WHERE to_user = %s AND from_user = %s AND " + id_condition + " ORDER BY id DESC LIMIT " + str(since_count), tuple(conds))
+        rows = cassandra_cluster.execute("SELECT id, to_user, from_user, \"timestamp\" FROM tuser_tuser_inspect WHERE to_user = %s AND from_user = %s " + id_condition + " ORDER BY id DESC LIMIT " + str(since_count), tuple(conds))
         formatter = EdgeFormatter()
         return json.dumps(formatter.format(rows))
     else:
