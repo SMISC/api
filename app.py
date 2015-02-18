@@ -1,3 +1,7 @@
+import atexit
+import functools
+import gc
+
 import socket
 import database
 import flask
@@ -61,6 +65,13 @@ def cassandrafied(f):
         finally:
             session.shutdown()
             cluster.shutdown()
+            # grumble grumble grumble, cassandra people caused memory leaks by assuming atexit is called
+            for ext in atexit.__dict__['_exithandlers']:
+                (handler, args, kwargs) = ext
+                if isinstance(handler, functools.partial) and len(handler.args) > 0 and isinstance(handler.args[0], CassandraCluster) and handler.func.func_name == '_shutdown_cluster':
+                    atexit.__dict__['_exithandlers'].remove(ext)
+            gc.collect()
+
 
     return decorator
 
