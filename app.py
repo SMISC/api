@@ -100,9 +100,9 @@ def require_passcode(f):
 
 @app.route('/clock', methods=['GET'], defaults={'vtime': None})
 @app.route('/clock/<vtime>', methods=['GET'])
+@timed('page.clock.render')
 @make_json_response
 @temporal
-@timed('page.clock.render')
 @track_pageview
 def show_clock(vtime):
     time_str = lambda t: datetime.fromtimestamp(t+(3600*-8)).strftime("%b %d %Y, %I:%M:%S %p PDT")
@@ -130,12 +130,12 @@ def show_clock(vtime):
 
 @app.route('/edges/near/<vtime>/followers/<user_id>', methods=['GET'])
 @app.route('/edges/followers/<user_id>', methods=['GET'], defaults={'vtime': None})
+@timed('page.edges_followers.render')
 @make_json_response
 @temporal
 @timeline
 @nearest_scan(Scan.SCAN_TYPE_FOLLOWERS)
 @cassandrafied
-@timed('page.edges_followers.render')
 @track_pageview
 def timeless_list_followers(cassandra_cluster, vtime, user_id, max_id, since_id, since_count, max_scan_id, min_scan_id):
     user = beta_predicate_users(TUser.query.filter(TUser.user_id == user_id)).first()
@@ -171,12 +171,12 @@ def timeless_list_followers(cassandra_cluster, vtime, user_id, max_id, since_id,
         return flask.make_response('', 404)
 
 @app.route('/edges/explore/<vtime>/<from_user>/to/<to_user>', methods=['GET'])
+@timed('page.edges_explore.render')
 @make_json_response
 @temporal
 @timeline
 @nearest_scan(Scan.SCAN_TYPE_FOLLOWERS)
 @cassandrafied
-@timed('page.edges_explore.render')
 @track_pageview
 def timeless_explore_edges(cassandra_cluster, vtime, from_user, to_user, max_id, since_id, since_count, max_scan_id, min_scan_id):
     to_user = beta_predicate_users(TUser.query.filter(TUser.user_id == to_user)).first()
@@ -213,11 +213,11 @@ def timeless_explore_edges(cassandra_cluster, vtime, from_user, to_user, max_id,
 
 @app.route('/user/near/<vtime>', methods=['GET'])
 @app.route('/user', methods=['GET'], defaults={'vtime': None})
+@timed('page.user_list.render')
 @make_json_response
 @temporal
 @cursor
 @nearest_scan(Scan.SCAN_TYPE_USER)
-@timed('page.user_list.render')
 @track_pageview
 def list_users(vtime, cursor_size, offset, max_scan_id, min_scan_id):
     users = beta_predicate_users(TUser.query.filter(
@@ -229,10 +229,10 @@ def list_users(vtime, cursor_size, offset, max_scan_id, min_scan_id):
 
 @app.route('/user/near/<vtime>/<user_id>', methods=['GET'])
 @app.route('/user/<user_id>', methods=['GET'], defaults={'vtime': None})
+@timed('page.user_get.render')
 @make_json_response
 @temporal
 @nearest_scan(Scan.SCAN_TYPE_USER)
-@timed('page.user_get.render')
 @track_pageview
 def show_user(vtime, user_id, max_scan_id, min_scan_id):
     user = beta_predicate_users(TUser.query.filter(
@@ -249,10 +249,10 @@ def show_user(vtime, user_id, max_scan_id, min_scan_id):
 
 @app.route('/user/near/<vtime>/<user_id>/tweets', methods=['GET'])
 @app.route('/user/<user_id>/tweets', methods=['GET'], defaults={'vtime': None})
+@timed('page.user_tweets.render')
 @make_json_response
 @temporal
 @timeline
-@timed('page.user_tweets.render')
 @track_pageview
 def list_tweets_by_user(vtime, max_id, since_id, since_count, user_id):
     user = beta_predicate_users(TUser.query.filter(
@@ -274,10 +274,10 @@ def list_tweets_by_user(vtime, max_id, since_id, since_count, user_id):
 
 @app.route('/tweets/near/<vtime>', methods=['GET'])
 @app.route('/tweets', methods=['GET'], defaults={'vtime': None})
+@timed('page.tweets.render')
 @make_json_response
 @temporal
 @timeline
-@timed('page.tweets.render')
 @track_pageview
 def list_tweets(vtime, max_id, since_id, since_count):
     tweets = beta_predicate_tweets(Tweet.query.filter(
@@ -290,9 +290,9 @@ def list_tweets(vtime, max_id, since_id, since_count):
     return json.dumps(formatter.format(tweets))
 
 @app.route('/search', methods=['GET', 'POST'])
+@timed('page.search.render')
 @make_json_response
 @timeline
-@timed('page.search.render')
 @track_pageview
 def search(max_id, since_id, since_count):
     tweets_query = beta_predicate_tweets(Tweet.query.filter(
@@ -321,9 +321,9 @@ def search(max_id, since_id, since_count):
         return resp
 
 @app.route('/guess/<guess_id>', methods=['GET'])
+@timed('page.guess_get.render')
 @make_json_response
 @require_passcode
-@timed('page.guess_get.render')
 @track_pageview
 def show_guess(team_id, guess_id):
     guess = Guess.query.filter(Guess.team_id == team_id, Guess.id == guess_id).first()
@@ -345,9 +345,9 @@ def show_guess(team_id, guess_id):
     return json.dumps(formatter.format(guess, scores))
 
 @app.route('/guess', methods=['GET'])
+@timed('page.guess_list.render')
 @make_json_response
 @require_passcode
-@timed('page.guess_list.render')
 @track_pageview
 def list_guesses(team_id):
     guesses = Guess.query.filter(Guess.team_id == team_id).all()
@@ -371,9 +371,9 @@ def list_guesses(team_id):
     return json.dumps(formatter.format(guesses, scores))
 
 @app.route('/guess', methods=['PUT', 'POST'])
+@timed('page.guess_make.render')
 @make_json_response
 @require_passcode
-@timed('page.guess_make.render')
 @track_pageview
 def make_guess(team_id):
     if 'bots' in flask.request.values:
