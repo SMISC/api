@@ -138,7 +138,7 @@ def show_clock(vtime):
 @cassandrafied
 @track_pageview
 def timeless_list_followers(cassandra_cluster, vtime, user_id, max_id, since_id, since_count, max_scan_id, min_scan_id):
-    user = beta_predicate_users(TUser.query.filter(TUser.user_id == user_id)).first()
+    user = beta_predicate_users(TwitterUser.query.filter(TwitterUser.twitter_id == user_id)).first()
 
     if user is not None:
         id_condition = ""

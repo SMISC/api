@@ -10,6 +10,7 @@ from functools import wraps
 from tweet import Tweet
 from tuser import TUser
 from scan import Scan
+from tuser import TwitterUser
 
 from database import db
 
@@ -153,10 +154,10 @@ def disabled_beta(f):
     return decorator
 
 def beta_predicate_users(query):
-    return query.filter(TUser.interesting == (not we_are_out_of_beta()))
+    return query.filter(TwitterUser.beta == (not we_are_out_of_beta()))
 
 def beta_predicate_tweets(query):
-    interesting_users_query = db.session.query(TUser.user_id).distinct().filter(TUser.interesting == (not we_are_out_of_beta())).subquery()
+    interesting_users_query = db.session.query(TwitterUser.twitter_id).filter(TwitterUser.beta == (not we_are_out_of_beta())).subquery()
     return query.filter(Tweet.user_id.in_(interesting_users_query))
 
 def nearest_scan(scan_type):

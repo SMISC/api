@@ -18,3 +18,9 @@ class TUser(db.Model):
     profile_image_url   = db.Column(db.Text())
     profile_banner_url  = db.Column(db.Text())
     protected           = db.Column(db.Boolean())
+
+class TwitterUser(db.Model):
+    __tablename__ = "users"
+
+    twitter_id          = db.Column(db.String(32), primary_key=True)
+    beta                = db.Column(db.Binary())
