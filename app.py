@@ -35,6 +35,7 @@ from util import disabled_beta
 from util import nearest_scan
 from util import beta_predicate_tweets
 from util import beta_predicate_users
+from util import beta_predicate_observations
 from util import we_are_out_of_beta
 from util import timed
 from util import track_pageview
@@ -180,7 +181,7 @@ def timeless_list_followers(cassandra_cluster, vtime, user_id, max_id, since_id,
 @cassandrafied
 @track_pageview
 def timeless_explore_edges(cassandra_cluster, vtime, from_user, to_user, max_id, since_id, since_count, max_scan_id, min_scan_id):
-    to_user = beta_predicate_users(TUser.query.filter(TUser.user_id == to_user)).first()
+    to_user = beta_predicate_users(TwitterUser.query.filter(TwitterUser.user_id == to_user)).first()
 
     if to_user is not None:
         id_condition = ""
@@ -221,7 +222,7 @@ def timeless_explore_edges(cassandra_cluster, vtime, from_user, to_user, max_id,
 @nearest_scan(Scan.SCAN_TYPE_USER)
 @track_pageview
 def list_users(vtime, cursor_size, offset, max_scan_id, min_scan_id):
-    users = beta_predicate_users(TUser.query.filter(
+    users = beta_predicate_observations(TUser.query.filter(
         TUser.id >= min_scan_id,
         TUser.id <= max_scan_id
     )).order_by(TUser.id.desc()).limit(cursor_size).offset(offset).all()
@@ -236,7 +237,7 @@ def list_users(vtime, cursor_size, offset, max_scan_id, min_scan_id):
 @nearest_scan(Scan.SCAN_TYPE_USER)
 @track_pageview
 def show_user(vtime, user_id, max_scan_id, min_scan_id):
-    user = beta_predicate_users(TUser.query.filter(
+    user = beta_predicate_observations(TUser.query.filter(
         TUser.user_id == user_id, 
         TUser.id >= min_scan_id,
         TUser.id <= max_scan_id
@@ -256,7 +257,7 @@ def show_user(vtime, user_id, max_scan_id, min_scan_id):
 @timeline
 @track_pageview
 def list_tweets_by_user(vtime, max_id, since_id, since_count, user_id):
-    user = beta_predicate_users(TUser.query.filter(
+    user = beta_predicate_observations(TUser.query.filter(
         TUser.user_id == user_id
     )).limit(1).first()
 

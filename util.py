@@ -153,8 +153,11 @@ def disabled_beta(f):
             return flask.make_response('', 429)
     return decorator
 
-def beta_predicate_users(query):
+def beta_predicate_observations(query):
     return query.filter(TwitterUser.beta == (not we_are_out_of_beta()))
+
+def beta_predicate_users(query):
+    return query.filter(TUser.interesting == (not we_are_out_of_beta()))
 
 def beta_predicate_tweets(query):
     interesting_users_query = db.session.query(TwitterUser.twitter_id).filter(TwitterUser.beta == (not we_are_out_of_beta())).subquery()
