@@ -1,15 +1,17 @@
 import atexit
 import functools
 import gc
-
 import socket
 import database
 import flask
 import logging
 import time
 import json
+import sys
 
 from logging.handlers import SysLogHandler
+from logging import StreamHandler
+
 from datetime import datetime
 from statsd import statsd
 
@@ -34,6 +36,7 @@ from util import nearest_scan
 from util import beta_predicate_tweets
 from util import beta_predicate_users
 from util import we_are_out_of_beta
+from util import timed
 
 from formatter import UserFormatter, TweetFormatter, GuessFormatter, EdgeFormatter
 from search import Search
@@ -98,7 +101,7 @@ def require_passcode(f):
 @app.route('/clock/<vtime>', methods=['GET'])
 @make_json_response
 @temporal
-@statsd.timed('page.clock.render')
+@timed('page.clock.render')
 def show_clock(vtime):
     time_str = lambda t: datetime.fromtimestamp(t+(3600*-8)).strftime("%b %d %Y, %I:%M:%S %p PDT")
 
@@ -130,7 +133,7 @@ def show_clock(vtime):
 @timeline
 @nearest_scan(Scan.SCAN_TYPE_FOLLOWERS)
 @cassandrafied
-@statsd.timed('page.edges_followers.render')
+@timed('page.edges_followers.render')
 def timeless_list_followers(cassandra_cluster, vtime, user_id, max_id, since_id, since_count, max_scan_id, min_scan_id):
     user = beta_predicate_users(TUser.query.filter(TUser.user_id == user_id)).first()
 
@@ -170,7 +173,7 @@ def timeless_list_followers(cassandra_cluster, vtime, user_id, max_id, since_id,
 @timeline
 @nearest_scan(Scan.SCAN_TYPE_FOLLOWERS)
 @cassandrafied
-@statsd.timed('page.edges_explore.render')
+@timed('page.edges_explore.render')
 def timeless_explore_edges(cassandra_cluster, vtime, from_user, to_user, max_id, since_id, since_count, max_scan_id, min_scan_id):
     to_user = beta_predicate_users(TUser.query.filter(TUser.user_id == to_user)).first()
 
@@ -210,7 +213,7 @@ def timeless_explore_edges(cassandra_cluster, vtime, from_user, to_user, max_id,
 @temporal
 @cursor
 @nearest_scan(Scan.SCAN_TYPE_USER)
-@statsd.timed('page.user_list.render')
+@timed('page.user_list.render')
 def list_users(vtime, cursor_size, offset, max_scan_id, min_scan_id):
     users = beta_predicate_users(TUser.query.filter(
         TUser.id >= min_scan_id,
@@ -224,7 +227,7 @@ def list_users(vtime, cursor_size, offset, max_scan_id, min_scan_id):
 @make_json_response
 @temporal
 @nearest_scan(Scan.SCAN_TYPE_USER)
-@statsd.timed('page.user_get.render')
+@timed('page.user_get.render')
 def show_user(vtime, user_id, max_scan_id, min_scan_id):
     user = beta_predicate_users(TUser.query.filter(
         TUser.user_id == user_id, 
@@ -243,7 +246,7 @@ def show_user(vtime, user_id, max_scan_id, min_scan_id):
 @make_json_response
 @temporal
 @timeline
-@statsd.timed('page.user_tweets.render')
+@timed('page.user_tweets.render')
 def list_tweets_by_user(vtime, max_id, since_id, since_count, user_id):
     user = beta_predicate_users(TUser.query.filter(
         TUser.user_id == user_id
@@ -267,7 +270,7 @@ def list_tweets_by_user(vtime, max_id, since_id, since_count, user_id):
 @make_json_response
 @temporal
 @timeline
-@statsd.timed('page.tweets.render')
+@timed('page.tweets.render')
 def list_tweets(vtime, max_id, since_id, since_count):
     tweets = beta_predicate_tweets(Tweet.query.filter(
         Tweet.timestamp >= TIME_BOT_COMPETITION_START,
@@ -281,7 +284,7 @@ def list_tweets(vtime, max_id, since_id, since_count):
 @app.route('/search', methods=['GET', 'POST'])
 @make_json_response
 @timeline
-@statsd.timed('page.search.render')
+@timed('page.search.render')
 def search(max_id, since_id, since_count):
     tweets_query = beta_predicate_tweets(Tweet.query.filter(
         Tweet.timestamp >= TIME_BOT_COMPETITION_START,
@@ -311,7 +314,7 @@ def search(max_id, since_id, since_count):
 @app.route('/guess/<guess_id>', methods=['GET'])
 @make_json_response
 @require_passcode
-@statsd.timed('page.guess_get.render')
+@timed('page.guess_get.render')
 def show_guess(team_id, guess_id):
     guess = Guess.query.filter(Guess.team_id == team_id, Guess.id == guess_id).first()
 
@@ -334,7 +337,7 @@ def show_guess(team_id, guess_id):
 @app.route('/guess', methods=['GET'])
 @make_json_response
 @require_passcode
-@statsd.timed('page.guess_list.render')
+@timed('page.guess_list.render')
 def list_guesses(team_id):
     guesses = Guess.query.filter(Guess.team_id == team_id).all()
 
@@ -359,7 +362,7 @@ def list_guesses(team_id):
 @app.route('/guess', methods=['PUT', 'POST'])
 @make_json_response
 @require_passcode
-@statsd.timed('page.guess_make.render')
+@timed('page.guess_make.render')
 def make_guess(team_id):
     if 'bots' in flask.request.values:
         bot_guesses = flask.request.values.getlist('bots')
@@ -398,4 +401,5 @@ app.logger.addHandler(syslog)
 
 if __name__ == "__main__":
     app.debug = True
+    app.logger.addHandler(StreamHandler(sys.stdout))
     app.run(host='0.0.0.0')

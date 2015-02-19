@@ -196,3 +196,20 @@ def nearest_scan(scan_type):
         return decorator
     return deco
 
+def timed(metric):
+    def deco(f):
+        @wraps(f)
+        def decorator(*args, **kwargs):
+            tags = ['env:' + flask.request.remote_addr]
+
+            if 'REMOTE_ADDR' in flask.request.environ:
+                ip = flask.request.environ['REMOTE_ADDR']
+                tags.append('ip:' + ip)
+
+            start = time.time()
+            result = f(*args, **kwargs)
+            statsd.timing(metric, time.time() - start, tags=tags, sample_rate=1)
+            return result
+        return decorator
+    return deco
+
