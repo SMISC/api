@@ -43,71 +43,81 @@ def translate_virtual_time_to_alpha_time(virtual_time):
 def get_current_virtual_time():
     return translate_alpha_time_to_virtual_time(time.time())
 
-def timeline(f):
-    @wraps(f)
-    def decorator(*args, **kwargs):
-        if 'X-Since-ID' in flask.request.headers:
-            since_id = int(flask.request.headers['X-Since-ID'])
-        else:
-            since_id = 0
+def timeline(default_cursor_size = None):
+    if None is default_cursor_size:
+        default_cursor_size = DEFAULT_CURSOR_SIZE
 
-        if 'X-Max-ID' in flask.request.headers:
-            max_id = int(flask.request.headers['X-Max-ID'])
-        else:
-            max_id = float('inf')
+    def deco(f):
+        @wraps(f)
+        def decorator(*args, **kwargs):
+            if 'X-Since-ID' in flask.request.headers:
+                since_id = int(flask.request.headers['X-Since-ID'])
+            else:
+                since_id = 0
 
-        if 'X-Since-Count' in flask.request.headers:
-            since_size = min(GENEROUS_CURSOR_UPPER_BOUND, int(flask.request.headers['X-Since-Count']))
-        else:
-            since_size = DEFAULT_CURSOR_SIZE
+            if 'X-Max-ID' in flask.request.headers:
+                max_id = int(flask.request.headers['X-Max-ID'])
+            else:
+                max_id = float('inf')
 
-        kwargs['since_id'] = since_id
-        kwargs['since_count'] = since_size
-        kwargs['max_id'] = max_id
+            if 'X-Since-Count' in flask.request.headers:
+                since_size = min(GENEROUS_CURSOR_UPPER_BOUND, int(flask.request.headers['X-Since-Count']))
+            else:
+                since_size = default_cursor_size
 
-        return f(*args, **kwargs)
+            kwargs['since_id'] = since_id
+            kwargs['since_count'] = since_size
+            kwargs['max_id'] = max_id
 
-    return decorator
+            return f(*args, **kwargs)
 
-def cursor(f):
-    @wraps(f)
-    def decorator(*args, **kwargs):
-        cursor = None
+        return decorator
+    return deco
 
-        if 'X-Cursor' in flask.request.headers:
-            cursor = flask.request.headers['X-Cursor']
-            (offset, cursor_size) = cursor.split('-')
-            offset = int(offset)
-            cursor_size = int(cursor_size)
+def cursor(default_cursor_size = None):
+    if None is default_cursor_size:
+        default_cursor_size = DEFAULT_CURSOR_SIZE
 
-        elif 'X-Cursor-Size' in flask.request.headers:
-            cursor_size = min(GENEROUS_CURSOR_UPPER_BOUND, int(flask.request.headers['X-Cursor-Size']))
-            offset = 0
-        else:
-            cursor_size = DEFAULT_CURSOR_SIZE
-            offset = 0
+    def deco(f):
+        @wraps(f)
+        def decorator(*args, **kwargs):
+            cursor = None
 
-        next_cursor = str(offset + cursor_size) + '-' + str(cursor_size)
+            if 'X-Cursor' in flask.request.headers:
+                cursor = flask.request.headers['X-Cursor']
+                (offset, cursor_size) = cursor.split('-')
+                offset = int(offset)
+                cursor_size = int(cursor_size)
 
-        kwargs['cursor_size'] = cursor_size
-        kwargs['offset'] = offset
+            elif 'X-Cursor-Size' in flask.request.headers:
+                cursor_size = min(GENEROUS_CURSOR_UPPER_BOUND, int(flask.request.headers['X-Cursor-Size']))
+                offset = 0
+            else:
+                cursor_size = default_cursor_size
+                offset = 0
 
-        @flask.after_this_request
-        def add_header(response):
-            if offset > 0:
-                prev_cursor = str(offset - cursor_size) + '-' + str(cursor_size)
-                response.headers['X-Cursor-Previous'] = prev_cursor
+            next_cursor = str(offset + cursor_size) + '-' + str(cursor_size)
 
-            response.headers['X-Cursor-Next'] = next_cursor
+            kwargs['cursor_size'] = cursor_size
+            kwargs['offset'] = offset
 
-            if cursor is not None:
-                response.headers['X-Cursor-Current'] = cursor
+            @flask.after_this_request
+            def add_header(response):
+                if offset > 0:
+                    prev_cursor = str(offset - cursor_size) + '-' + str(cursor_size)
+                    response.headers['X-Cursor-Previous'] = prev_cursor
 
-            return response
+                response.headers['X-Cursor-Next'] = next_cursor
 
-        return f(*args, **kwargs)
+                if cursor is not None:
+                    response.headers['X-Cursor-Current'] = cursor
 
-    return decorator
+                return response
+
+            return f(*args, **kwargs)
+
+        return decorator
+    return deco
 
 def make_json_response(f):
     @wraps(f)

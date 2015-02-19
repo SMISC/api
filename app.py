@@ -135,7 +135,7 @@ def show_clock(vtime):
 @timed('page.edges_followers.render')
 @make_json_response
 @temporal
-@timeline
+@timeline()
 @nearest_scan(Scan.SCAN_TYPE_FOLLOWERS)
 @cassandrafied
 @track_pageview
@@ -176,7 +176,7 @@ def timeless_list_followers(cassandra_cluster, vtime, user_id, max_id, since_id,
 @timed('page.edges_explore.render')
 @make_json_response
 @temporal
-@timeline
+@timeline()
 @nearest_scan(Scan.SCAN_TYPE_FOLLOWERS)
 @cassandrafied
 @track_pageview
@@ -218,7 +218,7 @@ def timeless_explore_edges(cassandra_cluster, vtime, from_user, to_user, max_id,
 @timed('page.user_list.render')
 @make_json_response
 @temporal
-@cursor
+@cursor(1E4)
 @nearest_scan(Scan.SCAN_TYPE_USER)
 @track_pageview
 def list_users(vtime, cursor_size, offset, max_scan_id, min_scan_id):
@@ -254,7 +254,7 @@ def show_user(vtime, user_id, max_scan_id, min_scan_id):
 @timed('page.user_tweets.render')
 @make_json_response
 @temporal
-@timeline
+@timeline()
 @track_pageview
 def list_tweets_by_user(vtime, max_id, since_id, since_count, user_id):
     user = beta_predicate_observations(TUser.query.filter(
@@ -279,7 +279,7 @@ def list_tweets_by_user(vtime, max_id, since_id, since_count, user_id):
 @timed('page.tweets.render')
 @make_json_response
 @temporal
-@timeline
+@timeline()
 @track_pageview
 def list_tweets(vtime, max_id, since_id, since_count):
     tweets = beta_predicate_tweets(Tweet.query.filter(
@@ -294,7 +294,7 @@ def list_tweets(vtime, max_id, since_id, since_count):
 @app.route('/search', methods=['GET', 'POST'])
 @timed('page.search.render')
 @make_json_response
-@timeline
+@timeline()
 @track_pageview
 def search(max_id, since_id, since_count):
     tweets_query = beta_predicate_tweets(Tweet.query.filter(
