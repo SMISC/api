@@ -46,6 +46,7 @@ from detectionteam import DetectionTeam
 from guess import Guess
 from guess_user import GuessUser
 from tuser import TUser
+from tuser import TwitterUser
 from tweet import Tweet
 from scan import Scan
 from bot import Bot
