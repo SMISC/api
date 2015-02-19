@@ -159,15 +159,6 @@ def beta_predicate_tweets(query):
     interesting_users_query = db.session.query(TUser.user_id).distinct().filter(TUser.interesting == (not we_are_out_of_beta())).subquery()
     return query.filter(Tweet.user_id.in_(interesting_users_query))
 
-def track_pageview(page):
-    def deco(f):
-        @wraps(f)
-        def decorator(*args, **kwargs):
-            statsd.increment(page + '.pageviews')
-            return f(*args, **kwargs)
-        return decorator
-    return deco
-
 def nearest_scan(scan_type):
     def deco(f):
         @wraps(f)
