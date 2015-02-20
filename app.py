@@ -249,6 +249,35 @@ def show_user(vtime, user_id, max_scan_id, min_scan_id):
         formatter = UserFormatter()
         return json.dumps(formatter.format(user))
 
+@app.route('/tweets/count/time/<start>/until/<end>', methods=['GET'])
+@timed('page.count_tweets_time.render')
+@make_json_response
+@track_pageview
+def count_tweets_by_time(start, end):
+    tweets = beta_predicate_tweets(Tweet.query.filter(
+        Tweet.timestamp >= TIME_BOT_COMPETITION_START,
+        Tweet.timestamp <= translate_alpha_time_to_virtual_time(time.time()),
+        Tweet.timestamp >= translate_alpha_time_to_virtual_time(int(start)),
+        Tweet.timestamp < translate_alpha_time_to_virtual_time(int(end))
+    )).count()
+
+    return json.dumps({'tweets': tweets})
+
+@app.route('/tweets/count/id/<start>/until/<end>', methods=['GET'])
+@timed('page.count_tweets_id.render')
+@make_json_response
+@track_pageview
+def count_tweets_by_id(start, end):
+    tweets = beta_predicate_tweets(Tweet.query.filter(
+        Tweet.timestamp >= TIME_BOT_COMPETITION_START,
+        Tweet.timestamp <= translate_alpha_time_to_virtual_time(time.time()),
+        Tweet.tweet_id >= start, 
+        Tweet.tweet_id < end,
+    )).count()
+
+    return json.dumps({'tweets': tweets})
+
+
 @app.route('/user/near/<vtime>/<user_id>/tweets', methods=['GET'])
 @app.route('/user/<user_id>/tweets', methods=['GET'], defaults={'vtime': None})
 @timed('page.user_tweets.render')
