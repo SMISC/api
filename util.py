@@ -11,6 +11,7 @@ from tweet import Tweet
 from tuser import TUser
 from scan import Scan
 from tuser import TwitterUser
+from bot import Bot
 
 from database import db
 
@@ -237,3 +238,23 @@ def track_pageview(f):
         return f(*args, **kwargs)
             
     return decorator
+
+def process_guess_scores(guess):
+    scores = dict()
+    user_ids = list()
+    for user in guess.users:
+        scores[user.tuser_id] = None # Default to no score for an invalid user
+        user_ids.append(user.tuser_id)
+
+    valid_users = beta_predicate_users(TwitterUser.query.filter(TwitterUser.twitter_id.in_(user_ids))).all()
+
+    for valid_user in valid_users:
+        scores[valid_user.twitter_id] = -0.25 # Default to -0.25 for an incorrect score
+
+    bots_found = Bot.query.filter(Bot.twitter_id.in_(scores.keys()))
+
+    if we_are_out_of_beta():
+        for bot in bots_found:
+            scores[bot.twitter_id] = 1
+
+    return scores

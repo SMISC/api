@@ -39,6 +39,7 @@ from util import beta_predicate_observations
 from util import we_are_out_of_beta
 from util import timed
 from util import track_pageview
+from util import process_guess_scores
 
 from formatter import UserFormatter, TweetFormatter, GuessFormatter, EdgeFormatter
 from search import Search
@@ -362,15 +363,7 @@ def show_guess(team_id, guess_id):
     if guess is None:
         return flask.make_response('', 404)
     
-    scores = dict()
-    for user in guess.users:
-        scores[user.tuser_id] = -0.25
-
-    bots_found = Bot.query.filter(Bot.twitter_id.in_(scores.keys()))
-
-    if we_are_out_of_beta():
-        for bot in bots_found:
-            scores[bot.twitter_id] = 1
+    scores = process_guess_scores(guess)
 
     formatter = GuessFormatter()
     return json.dumps(formatter.format(guess, scores))
@@ -389,14 +382,7 @@ def list_guesses(team_id):
 
     if len(guesses):
         for guess in guesses:
-            for user in guess.users:
-                scores[guess.id][user.tuser_id] = -0.25
-
-            bots_found = Bot.query.filter(Bot.twitter_id.in_(scores[guess.id].keys()))
-
-            if we_are_out_of_beta():
-                for bot in bots_found:
-                    scores[guess.id][bot.twitter_id] = 1
+            scores[guess.id] = process_guess_scores(guess)
 
     formatter = GuessFormatter()
     return json.dumps(formatter.format(guesses, scores))
@@ -423,17 +409,9 @@ def make_guess(team_id):
 
     database.db.session.commit()
 
-    bots_found = Bot.query.filter(Bot.twitter_id.in_(bot_guesses))
-    scores = dict()
-
-    for twitter_id in bot_guesses:
-        scores[twitter_id] = -0.25
-
-    if we_are_out_of_beta():
-        for bot in bots_found:
-            scores[bot.twitter_id] = 1
-
     guess = Guess.query.filter(Guess.id == guess.id).first()
+
+    scores = process_guess_scores(guess)
 
     formatter = GuessFormatter()
     return json.dumps(formatter.format(guess, scores))
