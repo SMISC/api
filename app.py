@@ -428,12 +428,16 @@ def get_scorecard(team_id, gtime):
     guesses = Guess.query.filter(Guess.team_id == team_id, Guess.timestamp <= gtime).all()
 
     net_score = 0
+    scores_by_user = dict() # user -> score; prevent same user counting multiple times
 
     for guess in guesses:
         guess_scores = process_guess_scores(guess)
         for (user, score) in guess_scores.items():
             if score is not None:
-                net_score += score
+                scores_by_user[user] = score
+
+    for (user, score) in scores_by_user.items():
+        net_score += score
 
     return json.dumps({'net_score': net_score})
 
