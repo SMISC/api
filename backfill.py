@@ -60,7 +60,7 @@ if __name__ == "__main__":
 
     with app.app_context():
         while True:
-            tweets = Tweet.query.filter(and_(Tweet.source == None, Tweet.deleted == None), Tweet.tweet_id > tweet_id, Tweet.tweet_id % tweet_modulus == tweet_offset).order_by(Tweet.tweet_id.asc()).limit(tweets_per_page).all()
+            tweets = Tweet.query.filter(Tweet.favorites_count == None, Tweet.tweet_id > tweet_id, Tweet.tweet_id % tweet_modulus == tweet_offset).order_by(Tweet.tweet_id.asc()).limit(tweets_per_page).all()
 
             if len(tweets) == 0:
                 break
@@ -97,8 +97,8 @@ if __name__ == "__main__":
                             coordinates = str(tweet['coordinates'])
 
                         favorites_count = None
-                        if 'favorites_count' in tweet:
-                            favorites_count = int(tweet['favorites_count'])
+                        if 'favorite_count' in tweet:
+                            favorites_count = int(tweet['favorite_count'])
 
                         tweets_updated += 1
                         Tweet.query.filter(Tweet.tweet_id == tweet['id']).update({
