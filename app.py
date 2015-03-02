@@ -380,9 +380,8 @@ def list_guesses(team_id):
     for guess in guesses:
         scores[guess.id] = dict()
 
-    if len(guesses):
-        for guess in guesses:
-            scores[guess.id] = process_guess_scores(guess)
+    for guess in guesses:
+        scores[guess.id] = process_guess_scores(guess)
 
     formatter = GuessFormatter()
     return json.dumps(formatter.format(guesses, scores))
@@ -415,6 +414,28 @@ def make_guess(team_id):
 
     formatter = GuessFormatter()
     return json.dumps(formatter.format(guess, scores))
+
+@app.route('/scorecard', methods=['GET'], defaults={'gtime': None})
+@app.route('/scorecard/near/<gtime>', methods=['GET'])
+@timed('page.scorecard.render')
+@make_json_response
+@require_passcode
+@track_pageview
+def get_scorecard(team_id, gtime):
+    if gtime is None:
+        gtime = round(time.time())
+
+    guesses = Guess.query.filter(Guess.team_id == team_id, Guess.timestamp <= gtime).all()
+
+    net_score = 0
+
+    for guess in guesses:
+        guess_scores = process_guess_scores(guess)
+        for (user, score) in guess_scores.items():
+            if score is not None:
+                net_score += score
+
+    return json.dumps({'net_score': net_score})
 
 syslog = SysLogHandler('/dev/log', SysLogHandler.LOG_DAEMON, socket.SOCK_STREAM)
 syslog.setLevel(logging.DEBUG)

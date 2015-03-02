@@ -102,13 +102,19 @@ class GuessFormatter(Formatter):
             guesses.append(user.tuser_id)
 
         guess_scores = []
+        net_score = 0
+
         for (user_id, score) in scores.items():
             guess_scores.append({"user_id": user_id, "score": score})
+
+            if score is not None:
+                net_score += score
 
         return {
             "guess_id": guess.id,
             "timestamp": guess.timestamp,
             "guesses": guesses,
+            "net_score": net_score,
             "scores": guess_scores
         }
 
