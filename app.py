@@ -429,6 +429,8 @@ def get_scorecard(team_id, gtime):
     guesses = Guess.query.filter(Guess.team_id == team_id, Guess.timestamp <= gtime).all()
 
     net_score = 0
+    negative_score = 0
+    positive_score = 0
     scores_by_user = dict() # user -> score; prevent same user counting multiple times
 
     for guess in guesses:
@@ -439,8 +441,16 @@ def get_scorecard(team_id, gtime):
 
     for (user, score) in scores_by_user.items():
         net_score += score
+        if score > 0:
+            positive_score += score
+        elif score < 0:
+            negative_score += score
 
-    return json.dumps({'net_score': net_score})
+    return json.dumps({
+        'net_score': net_score,
+        'negative_score': negative_score,
+        'positive_score': positive_score
+    })
 
 syslog = SysLogHandler('/dev/log', SysLogHandler.LOG_DAEMON, socket.SOCK_STREAM)
 syslog.setLevel(logging.DEBUG)
