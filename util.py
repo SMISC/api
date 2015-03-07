@@ -20,6 +20,7 @@ TIME_BETA_START = 1422230400            # Jan 26, 2015 at Midnight UTC
 #TIME_BETA_START = 1417996800           # Dec 8,  2014 at Midnight UTC
 TIME_BOT_COMPETITION_START = 1417996800 # Dec 8,  2014 at Midnight UTC
 TIME_BOT_COMPETITION_END = 1420675200   # Jan 8,  2015 at Midnight UTC
+TIME_DETECTION_END = 1426564800         # March 17, 2015 at Midnight EST
 
 GENEROUS_CURSOR_UPPER_BOUND = 15000
 DEFAULT_CURSOR_SIZE = 500
@@ -34,6 +35,9 @@ def get_time_anchor():
 
 def we_are_out_of_beta():
     return (time.time() >= TIME_DETECTION_START)
+
+def competition_is_over():
+    return (time.time() >= TIME_DETECTION_END)
 
 def translate_alpha_time_to_virtual_time(alpha_time):
     return alpha_time - (get_time_anchor() - TIME_BOT_COMPETITION_START)
@@ -157,13 +161,6 @@ def temporal(f):
             
     return decorator
 
-def disabled_beta(f):
-    @wraps(f)
-    def decorator(*args, **kwargs):
-        if not we_are_out_of_beta():
-            return flask.make_response('', 429)
-    return decorator
-
 def beta_predicate_observations(query):
     return query.filter(TUser.interesting == (not we_are_out_of_beta()))
 
@@ -258,3 +255,13 @@ def process_guess_scores(guess):
             scores[bot.twitter_id] = 1
 
     return scores
+
+def disabled_after_competition_ends(f):
+    @wraps(f)
+    def decorator(*args, **kwargs):
+        if competition_is_over():
+            return flask.make_response('', 401)
+
+        return f(*args, **kwargs)
+            
+    return decorator

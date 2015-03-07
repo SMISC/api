@@ -31,8 +31,8 @@ from util import get_time_anchor
 from util import get_current_virtual_time
 from util import translate_alpha_time_to_virtual_time
 from util import translate_virtual_time_to_alpha_time
-from util import disabled_beta
 from util import nearest_scan
+from util import disabled_after_competition_ends
 from util import beta_predicate_tweets
 from util import beta_predicate_users
 from util import beta_predicate_observations
@@ -389,6 +389,7 @@ def list_guesses(team_id):
 @app.route('/guess', methods=['PUT', 'POST'])
 @timed('page.guess_make.render')
 @make_json_response
+@disabled_after_competition_ends
 @require_passcode
 @track_pageview
 def make_guess(team_id):
