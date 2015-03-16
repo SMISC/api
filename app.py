@@ -40,6 +40,7 @@ from util import we_are_out_of_beta
 from util import timed
 from util import track_pageview
 from util import process_guess_scores
+from util import get_score_bonus
 
 from formatter import UserFormatter, TweetFormatter, GuessFormatter, EdgeFormatter
 from search import Search
@@ -446,8 +447,13 @@ def get_scorecard(team_id, gtime):
         elif score < 0:
             negative_score += score
 
+    (finished, bonus) = get_score_bonus(team_id, guesses)
+
     return json.dumps({
-        'net_score': net_score,
+        'score_subtotal': net_score,
+        'score_total': net_score + bonus,
+        'finished': finished,
+        'bonus': bonus,
         'negative_score': negative_score,
         'positive_score': positive_score
     })

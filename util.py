@@ -2,6 +2,7 @@ from statsd import statsd
 
 import logging
 import time
+import math
 import json
 import flask
 
@@ -265,3 +266,35 @@ def disabled_after_competition_ends(f):
         return f(*args, **kwargs)
             
     return decorator
+
+def get_score_bonus(team_id, guesses):
+    bonus = 0
+    finished = False
+
+    bots = Bot.query.all()
+
+    bot_users = set()
+    guessed_users = set()
+    last_timestamp = None
+
+    for bot in bots:
+        bot_users.add(bot.twitter_id)
+
+    for guess in guesses:
+        if last_timestamp is None:
+            last_timestamp = guess.timestamp
+
+        for user in guess.users:
+            tuser_id = str(user.tuser_id)
+
+            guessed_users.add(tuser_id)
+
+            if tuser_id in bot_users:
+                if guess.timestamp > last_timestamp:
+                    last_timestamp = guess.timestamp
+
+    if len(bot_users & guessed_users) == len(bot_users):
+        finished = True
+        bonus = math.ceil((float(TIME_DETECTION_END) - last_timestamp)/86400)-1
+
+    return (finished, bonus)
