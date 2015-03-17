@@ -274,27 +274,34 @@ def get_score_bonus(team_id, guesses):
     bots = Bot.query.all()
 
     bot_users = set()
-    guessed_users = set()
-    last_timestamp = None
+    guessed_users = dict()
 
     for bot in bots:
         bot_users.add(bot.twitter_id)
 
     for guess in guesses:
-        if last_timestamp is None:
-            last_timestamp = guess.timestamp
-
         for user in guess.users:
             tuser_id = str(user.tuser_id)
 
-            guessed_users.add(tuser_id)
+            if tuser_id in guessed_users:
+                guessed_users[tuser_id].append(guess.timestamp)
+            else:
+                guessed_users[tuser_id] = [guess.timestamp]
 
-            if tuser_id in bot_users:
-                if guess.timestamp > last_timestamp:
-                    last_timestamp = guess.timestamp
-
-    if len(bot_users & guessed_users) == len(bot_users):
+    if len(bot_users & set(guessed_users.keys())) == len(bot_users):
         finished = True
+
+        last_timestamp = None
+
+        for bot in bots:
+            timestamps = guessed_users[bot.twitter_id]
+            timestamp = min(timestamps)
+
+            if last_timestamp is None:
+                last_timestamp = timestamp
+            else:
+                last_timestamp = max(timestamp, last_timestamp)
+
         bonus = math.ceil((float(TIME_DETECTION_END) - last_timestamp)/86400)-1
 
     return (finished, bonus)

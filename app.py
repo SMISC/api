@@ -427,7 +427,7 @@ def get_scorecard(team_id, gtime):
     if gtime is None:
         gtime = round(time.time())
 
-    guesses = Guess.query.filter(Guess.team_id == team_id, Guess.timestamp <= gtime).all()
+    guesses = Guess.query.filter(Guess.beta == False, Guess.team_id == team_id, Guess.timestamp <= gtime).all()
 
     net_score = 0
     negative_score = 0
